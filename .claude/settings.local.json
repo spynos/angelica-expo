@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx eas-cli:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(/opt/homebrew/bin/node --version)",
+      "Bash(/opt/homebrew/bin/npm --version)"
     ]
   }
 }
