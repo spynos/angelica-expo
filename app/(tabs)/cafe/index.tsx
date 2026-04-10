@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -27,19 +27,23 @@ export default function CafeFeed() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   const load = useCallback(async () => {
+    setError(null);
     try {
-      setError(null);
-      const rows = await fetchFeed(userId);
+      const rows = await fetchFeed(userIdRef.current);
       setPoems(rows);
+      setLoading(false);
+      setRefreshing(false);
     } catch (e: any) {
+      console.warn('[cafe] feed load failed:', e);
       setError(e?.message ?? '피드를 불러오지 못했습니다.');
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     load();
