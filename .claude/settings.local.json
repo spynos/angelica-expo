@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx eas-cli:*)"
+      "Bash(npx eas-cli:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
