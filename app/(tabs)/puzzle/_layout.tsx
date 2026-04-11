@@ -16,6 +16,7 @@ export default function PuzzleStack() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="history" options={{ title: '기록' }} />
       <Stack.Screen name="sudoku/[difficulty]" options={{ title: '스도쿠' }} />
       <Stack.Screen name="sudoku/complete" options={{ headerShown: false }} />
     </Stack>
