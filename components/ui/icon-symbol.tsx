@@ -1,59 +1,84 @@
-// Fallback for using MaterialIcons on Android and web.
+import {
+  Blocks,
+  Book,
+  BookOpen,
+  Bookmark,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Code,
+  Heart,
+  Home,
+  LayoutGrid,
+  Lightbulb,
+  List,
+  Pencil,
+  Plus,
+  Send,
+  Settings,
+  SquarePen,
+  Trophy,
+  Undo2,
+  User,
+  X,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { type StyleProp, type ViewStyle } from 'react-native';
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
-import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
+type Entry = { Icon: LucideIcon; filled?: boolean };
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
-
-/**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
- */
 const MAPPING = {
-  'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-  'square.and.pencil': 'edit',
-  'square.grid.3x3.fill': 'grid-view',
-  'pencil': 'edit',
-  'list.bullet': 'list',
-  'book.fill': 'menu-book',
-  'puzzlepiece.fill': 'extension',
-  'person.fill': 'person',
-  'heart': 'favorite-border',
-  'heart.fill': 'favorite',
-  'bookmark': 'bookmark-border',
-  'bookmark.fill': 'bookmark',
-  'gearshape.fill': 'settings',
-  'plus': 'add',
-  'arrow.uturn.backward': 'undo',
-  'lightbulb': 'lightbulb-outline',
-  'pencil.tip': 'edit',
-  'xmark': 'close',
-  'checkmark': 'check',
-} as IconMapping;
+  'house.fill': { Icon: Home },
+  'paperplane.fill': { Icon: Send },
+  'chevron.left.forwardslash.chevron.right': { Icon: Code },
+  'chevron.right': { Icon: ChevronRight },
+  'chevron.left': { Icon: ChevronLeft },
+  'square.and.pencil': { Icon: SquarePen },
+  'square.grid.3x3.fill': { Icon: LayoutGrid },
+  pencil: { Icon: Pencil },
+  'list.bullet': { Icon: List },
+  trophy: { Icon: Trophy },
+  'book.fill': { Icon: BookOpen },
+  book: { Icon: Book },
+  'puzzlepiece.fill': { Icon: Blocks },
+  'person.fill': { Icon: User },
+  heart: { Icon: Heart },
+  'heart.fill': { Icon: Heart, filled: true },
+  bookmark: { Icon: Bookmark },
+  'bookmark.fill': { Icon: Bookmark, filled: true },
+  'gearshape.fill': { Icon: Settings },
+  plus: { Icon: Plus },
+  'arrow.uturn.backward': { Icon: Undo2 },
+  lightbulb: { Icon: Lightbulb },
+  'pencil.tip': { Icon: Pencil },
+  xmark: { Icon: X },
+  checkmark: { Icon: Check },
+} satisfies Record<string, Entry>;
 
-/**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
- */
+export type IconSymbolName = keyof typeof MAPPING;
+
 export function IconSymbol({
   name,
   size = 24,
   color,
   style,
+  strokeWidth = 2,
 }: {
   name: IconSymbolName;
   size?: number;
-  color: string | OpaqueColorValue;
-  style?: StyleProp<TextStyle>;
-  weight?: SymbolWeight;
+  color: string;
+  style?: StyleProp<ViewStyle>;
+  strokeWidth?: number;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const entry = MAPPING[name] as Entry;
+  const { Icon, filled } = entry;
+  return (
+    <Icon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      fill={filled ? color : 'none'}
+      style={style}
+    />
+  );
 }

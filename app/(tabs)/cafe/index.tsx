@@ -57,7 +57,7 @@ export default function CafeFeed() {
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[Typography.heading1, { color: palette.text }]}>문학카페</Text>
+        <Text style={[Typography.display, { color: palette.text }]}>문학카페</Text>
         <HeaderAvatarButton />
       </View>
       {loading ? (
@@ -101,8 +101,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.base,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
   list: { paddingHorizontal: Spacing.xxl, paddingBottom: 140 },
   center: { padding: Spacing.xxl, alignItems: 'center' },

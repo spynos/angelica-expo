@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HeaderBackButton } from '@/src/components/HeaderBackButton';
 
 export default function CafeStack() {
   const scheme = useColorScheme() ?? 'light';
@@ -13,6 +14,9 @@ export default function CafeStack() {
         headerTintColor: palette.text,
         headerTitleStyle: { color: palette.text },
         contentStyle: { backgroundColor: palette.background },
+        headerBackTitle: '',
+        headerBackButtonDisplayMode: 'minimal',
+        headerLeft: () => <HeaderBackButton />,
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />

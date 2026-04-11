@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { Colors, Radius, Typography } from '@/constants/theme';
+import { Colors, Palette, Radius, Shadow, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/src/store/auth';
 
@@ -19,25 +19,34 @@ export function HeaderAvatarButton() {
       style={({ pressed }) => [
         styles.avatar,
         {
-          backgroundColor: palette.surface,
-          borderColor: palette.border,
-          opacity: pressed ? 0.85 : 1,
+          backgroundColor: Palette.primarySoft,
+          borderColor: Palette.primary,
+          opacity: pressed ? 0.8 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
         },
       ]}
-      hitSlop={8}
+      hitSlop={10}
     >
-      <Text style={[Typography.labelLg, { color: palette.text }]}>{initial}</Text>
+      <Text
+        style={[
+          Typography.labelLg,
+          { color: Palette.primaryPressed, fontSize: 16 },
+        ]}
+      >
+        {initial}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   avatar: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: Radius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadow.sm,
   },
 });
