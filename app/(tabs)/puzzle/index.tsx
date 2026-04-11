@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 
 import { Colors, Palette, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HeaderAvatarButton } from '@/src/components/HeaderAvatarButton';
 import type { SudokuDifficulty } from '@/src/types/db';
 
 const LEVELS: { key: SudokuDifficulty; label: string; subtitle: string }[] = [
@@ -18,8 +19,11 @@ export default function PuzzleHome() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={[Typography.heading1, { color: palette.text }]}>퍼즐게임</Text>
+        <HeaderAvatarButton />
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[Typography.heading1, { color: palette.text }]}>퍼즐</Text>
         <Text style={[Typography.bodyMd, { color: palette.textMuted, marginBottom: Spacing.xxl }]}>
           오늘의 스도쿠를 골라보세요.
         </Text>
@@ -62,7 +66,15 @@ export default function PuzzleHome() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: Spacing.xxl },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.base,
+    paddingBottom: Spacing.md,
+  },
+  content: { paddingHorizontal: Spacing.xxl, paddingBottom: 140 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

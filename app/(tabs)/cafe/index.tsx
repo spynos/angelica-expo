@@ -2,18 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 
-import { Colors, Palette, Radius, Spacing, Typography } from '@/constants/theme';
+import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HeaderAvatarButton } from '@/src/components/HeaderAvatarButton';
 import { PoemCard } from '@/src/components/PoemCard';
 import { fetchFeed } from '@/src/lib/poems';
 import { useAuthStore } from '@/src/store/auth';
@@ -59,6 +58,7 @@ export default function CafeFeed() {
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[Typography.heading1, { color: palette.text }]}>문학카페</Text>
+        <HeaderAvatarButton />
       </View>
       {loading ? (
         <View style={styles.center}>
@@ -90,38 +90,20 @@ export default function CafeFeed() {
         />
       )}
 
-      <Pressable
-        accessibilityLabel="시 쓰기"
-        onPress={() => router.push('/(tabs)/cafe/write')}
-        style={({ pressed }) => [
-          styles.fab,
-          { backgroundColor: pressed ? Palette.primaryPressed : Palette.primary },
-        ]}
-      >
-        <IconSymbol name="plus" color="#fff" size={28} />
-      </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: Spacing.xxl, paddingTop: Spacing.base, paddingBottom: Spacing.md },
-  list: { paddingHorizontal: Spacing.xxl, paddingBottom: 120 },
-  center: { padding: Spacing.xxl, alignItems: 'center' },
-  fab: {
-    position: 'absolute',
-    right: Spacing.xxl,
-    bottom: Spacing.xxl,
-    width: 56,
-    height: 56,
-    borderRadius: Radius.full,
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 6,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.base,
+    paddingBottom: Spacing.md,
   },
+  list: { paddingHorizontal: Spacing.xxl, paddingBottom: 140 },
+  center: { padding: Spacing.xxl, alignItems: 'center' },
 });
