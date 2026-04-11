@@ -17,6 +17,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "youngsoo.brain@gmail.com",
+        "ascAppId": "6762047918",
+        "appleTeamId": "QM8RLF4S33"
+      }
+    }
   }
 }

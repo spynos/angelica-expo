@@ -57,6 +57,12 @@
         "projectId": "290ea9dd-d5d5-4700-b1fe-85290cf94993"
       }
     },
-    "owner": "spynos"
+    "owner": "spynos",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/290ea9dd-d5d5-4700-b1fe-85290cf94993"
+    }
   }
 }
