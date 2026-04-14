@@ -15,6 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SudokuBoard } from '@/src/components/SudokuBoard';
 import { generatePuzzle, isSolved, N, SIZE } from '@/src/lib/sudoku';
 import { clearSession, loadSession, saveSession, type SudokuSession } from '@/src/lib/storage';
+import { markCompleted, recordPlay } from '@/src/lib/games/activity';
 import type { SudokuDifficulty } from '@/src/types/db';
 
 const HINTS_PER_GAME = 3;
@@ -37,6 +38,7 @@ export default function SudokuGameScreen() {
   const historyRef = useRef<{ idx: number; prev: number; prevMemo: number[] | undefined }[]>([]);
 
   useEffect(() => {
+    recordPlay('sudoku', { variant: diff });
     const existing = loadSession(diff);
     if (existing && !existing.completedAt) {
       setSession(existing);
@@ -184,6 +186,7 @@ export default function SudokuGameScreen() {
   // Navigate to complete screen when solved.
   useEffect(() => {
     if (session?.completedAt) {
+      markCompleted('sudoku', { variant: session.difficulty });
       clearSession(session.difficulty);
       router.replace({
         pathname: '/(tabs)/puzzle/sudoku/complete',

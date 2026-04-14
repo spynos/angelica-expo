@@ -4,6 +4,12 @@ import type { SudokuDifficulty } from '@/src/types/db';
 
 export const storage = createMMKV({ id: 'angelica-storage' });
 
+// Lazily import to avoid a require cycle (activity.ts imports `storage`).
+function markSudokuInProgress(variant: SudokuDifficulty, hasInProgress: boolean) {
+  const { markInProgress } = require('./games/activity') as typeof import('./games/activity');
+  markInProgress('sudoku', hasInProgress, variant);
+}
+
 export type SudokuSession = {
   difficulty: SudokuDifficulty;
   puzzle: number[];
@@ -31,8 +37,10 @@ export function loadSession(difficulty: SudokuDifficulty): SudokuSession | null 
 
 export function saveSession(session: SudokuSession) {
   storage.set(KEY_SESSION(session.difficulty), JSON.stringify(session));
+  markSudokuInProgress(session.difficulty, !session.completedAt);
 }
 
 export function clearSession(difficulty: SudokuDifficulty) {
   storage.remove(KEY_SESSION(difficulty));
+  markSudokuInProgress(difficulty, false);
 }

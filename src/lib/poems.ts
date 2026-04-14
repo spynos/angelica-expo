@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
+import { withTimeout } from './async';
 import type { Poem, PoemBgColor, PoemFont, PoemVisibility, PoemWithAuthor } from '@/src/types/db';
+
+const FEED_TIMEOUT_MS = 8000;
+const POEM_TIMEOUT_MS = 6000;
 
 const POEM_SELECT = `
   *,
@@ -24,31 +28,60 @@ function shape(row: RawPoem, viewerId: string | null): PoemWithAuthor {
 }
 
 export async function fetchFeed(viewerId: string | null): Promise<PoemWithAuthor[]> {
-  const { data, error } = await supabase
-    .from('poems')
-    .select(POEM_SELECT)
-    .eq('visibility', 'public')
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return (data as unknown as RawPoem[]).map((r) => shape(r, viewerId));
+  const started = Date.now();
+  console.log('[poems] fetchFeed start', { viewerId });
+  try {
+    const query = supabase
+      .from('poems')
+      .select(POEM_SELECT)
+      .eq('visibility', 'public')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    const { data, error, status } = await withTimeout(query, FEED_TIMEOUT_MS, 'fetchFeed');
+    if (error) {
+      console.warn('[poems] fetchFeed error', {
+        status,
+        code: (error as any).code,
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+      });
+      throw error;
+    }
+    console.log('[poems] fetchFeed ok', {
+      ms: Date.now() - started,
+      count: data?.length ?? 0,
+      status,
+    });
+    return (data as unknown as RawPoem[]).map((r) => shape(r, viewerId));
+  } catch (e: any) {
+    console.warn('[poems] fetchFeed threw', {
+      ms: Date.now() - started,
+      name: e?.name,
+      message: e?.message,
+    });
+    throw e;
+  }
 }
 
 export async function fetchPoem(
   id: string,
   viewerId: string | null,
 ): Promise<PoemWithAuthor | null> {
-  const [{ data, error }, bookmarkRes] = await Promise.all([
-    supabase.from('poems').select(POEM_SELECT).eq('id', id).maybeSingle(),
-    viewerId
-      ? supabase
-          .from('bookmarks')
-          .select('user_id')
-          .eq('poem_id', id)
-          .eq('user_id', viewerId)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null } as const),
-  ]);
+  const poemQuery = supabase.from('poems').select(POEM_SELECT).eq('id', id).maybeSingle();
+  const bookmarkQuery = viewerId
+    ? supabase
+        .from('bookmarks')
+        .select('user_id')
+        .eq('poem_id', id)
+        .eq('user_id', viewerId)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null } as const);
+  const [{ data, error }, bookmarkRes] = await withTimeout(
+    Promise.all([poemQuery, bookmarkQuery]),
+    POEM_TIMEOUT_MS,
+    'fetchPoem',
+  );
   if (error) throw error;
   if (!data) return null;
   const shaped = shape(data as unknown as RawPoem, viewerId);
@@ -60,11 +93,12 @@ export async function fetchPoemsByUser(
   userId: string,
   viewerId: string | null,
 ): Promise<PoemWithAuthor[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from('poems')
     .select(POEM_SELECT)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  const { data, error } = await withTimeout(query, FEED_TIMEOUT_MS, 'fetchPoemsByUser');
   if (error) throw error;
   return (data as unknown as RawPoem[]).map((r) => shape(r, viewerId));
 }

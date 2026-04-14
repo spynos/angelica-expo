@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { withTimeout } from '@/src/lib/async';
 import { supabase } from '@/src/lib/supabase';
 import type { UserProfile } from '@/src/types/db';
 
@@ -39,32 +40,86 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }));
 
+export type AuthBootstrapStatus =
+  | 'idle'
+  | 'session'
+  | 'profile'
+  | 'done'
+  | 'timeout'
+  | 'error';
+
+const SESSION_TIMEOUT_MS = 6000;
+const PROFILE_TIMEOUT_MS = 4000;
+
 /**
  * Bootstrap auth on app start: read persisted session, subscribe to changes,
- * fetch profile. Returns true once initial state is settled so the splash
- * screen can hide without flashing the wrong route.
+ * fetch profile. Returns `ready` once initial state is settled so the splash
+ * screen can hide without flashing the wrong route, plus a `status` flag the
+ * splash UI can surface to the user.
+ *
+ * The function never leaves `ready` false — on network/timeout failure it
+ * resolves to a logged-out state so the app always reaches the main tree.
  */
 export function useAuthBootstrap() {
   const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<AuthBootstrapStatus>('idle');
 
   useEffect(() => {
     let cancelled = false;
 
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
+    const finish = (next: AuthBootstrapStatus) => {
       if (cancelled) return;
-      useAuthStore.setState({
-        session: data.session,
-        user: data.session?.user ?? null,
-        loading: false,
-      });
-      if (data.session?.user) {
-        await useAuthStore.getState().refreshProfile();
-      }
-      if (!cancelled) setReady(true);
+      setStatus(next);
+      setReady(true);
     };
 
-    init();
+    const init = async () => {
+      setStatus('session');
+      let session: Session | null = null;
+      try {
+        const { data } = await withTimeout(
+          supabase.auth.getSession(),
+          SESSION_TIMEOUT_MS,
+          'getSession',
+        );
+        session = data.session ?? null;
+      } catch (err) {
+        console.warn('[auth] getSession failed, continuing as signed-out', err);
+        if (!cancelled) {
+          useAuthStore.setState({ session: null, user: null, loading: false });
+          finish('timeout');
+        }
+        return;
+      }
+
+      if (cancelled) return;
+      useAuthStore.setState({
+        session,
+        user: session?.user ?? null,
+        loading: false,
+      });
+
+      if (session?.user) {
+        setStatus('profile');
+        try {
+          await withTimeout(
+            useAuthStore.getState().refreshProfile(),
+            PROFILE_TIMEOUT_MS,
+            'refreshProfile',
+          );
+        } catch (err) {
+          // Profile fetch is non-critical; let the app start and retry later.
+          console.warn('[auth] refreshProfile failed, continuing without profile', err);
+        }
+      }
+
+      finish('done');
+    };
+
+    init().catch((err) => {
+      console.error('[auth] bootstrap unexpected error', err);
+      finish('error');
+    });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       useAuthStore.setState({
@@ -73,7 +128,11 @@ export function useAuthBootstrap() {
         loading: false,
       });
       if (session?.user) {
-        await useAuthStore.getState().refreshProfile();
+        try {
+          await useAuthStore.getState().refreshProfile();
+        } catch (err) {
+          console.warn('[auth] refreshProfile on auth change failed', err);
+        }
       } else {
         useAuthStore.setState({ profile: null });
       }
@@ -85,5 +144,5 @@ export function useAuthBootstrap() {
     };
   }, []);
 
-  return ready;
+  return { ready, status };
 }

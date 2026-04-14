@@ -35,12 +35,21 @@ export default function PoemDetailScreen() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [poem, setPoem] = useState<PoemWithAuthor | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
     try {
       const data = await fetchPoem(id, userId);
       setPoem(data);
+    } catch (e: any) {
+      console.warn('[cafe] poem load failed:', e);
+      setError(e?.message ?? '시를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -101,6 +110,23 @@ export default function PoemDetailScreen() {
     return (
       <View style={[styles.center, { backgroundColor: palette.background }]}>
         <ActivityIndicator color={palette.tint} />
+        <Text style={[Typography.bodySm, { color: palette.textMuted, marginTop: Spacing.md }]}>
+          글을 불러오는 중…
+        </Text>
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View style={[styles.center, { backgroundColor: palette.background }]}>
+        <Text
+          style={[Typography.bodyMd, { color: palette.textMuted, textAlign: 'center' }]}
+        >
+          {error}
+        </Text>
+        <Pressable onPress={load} style={styles.retry}>
+          <Text style={[Typography.labelLg, { color: palette.tint }]}>다시 시도</Text>
+        </Pressable>
       </View>
     );
   }
@@ -185,7 +211,15 @@ export default function PoemDetailScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: Spacing.xxl, paddingBottom: Spacing.xxl * 2 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
+  retry: {
+    marginTop: Spacing.base,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#D8D4CC',
+  },
   actions: {
     flexDirection: 'row',
     gap: Spacing.xl,

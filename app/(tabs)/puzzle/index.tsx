@@ -1,132 +1,188 @@
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Palette, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { HeaderAvatarButton } from '@/src/components/HeaderAvatarButton';
+import { getAllActivities, getRecentOrder, type GameActivity } from '@/src/lib/games/activity';
+import { GAMES, type GameId, type GameMeta } from '@/src/lib/games/registry';
 
-type GameId = 'sudoku' | 'blockmatch' | 'crossword' | 'quiz';
+function greetingForHour(hour: number) {
+  if (hour < 5) return '늦은 밤이에요.';
+  if (hour < 12) return '좋은 아침이에요.';
+  if (hour < 18) return '좋은 오후예요.';
+  return '좋은 저녁이에요.';
+}
 
-type GameMeta = {
-  id: GameId;
-  title: string;
-  subtitle: string;
-  icon: Parameters<typeof IconSymbol>[0]['name'];
-  onPress: () => void;
-  comingSoon?: boolean;
-};
-
-const GAMES: GameMeta[] = [
-  {
-    id: 'sudoku',
-    title: '스도쿠',
-    subtitle: '숫자로 채우는 고요',
-    icon: 'square.grid.3x3.fill',
-    onPress: () => router.push('/(tabs)/puzzle/sudoku/easy' as any),
-  },
-  {
-    id: 'blockmatch',
-    title: '블록매치',
-    subtitle: '색과 모양의 리듬',
-    icon: 'puzzlepiece.fill',
-    onPress: () => router.push('/(tabs)/puzzle/blockmatch' as any),
-    comingSoon: true,
-  },
-  {
-    id: 'crossword',
-    title: '십자말풀이',
-    subtitle: '언어의 결을 따라',
-    icon: 'pencil',
-    onPress: () => router.push('/(tabs)/puzzle/crossword' as any),
-    comingSoon: true,
-  },
-  {
-    id: 'quiz',
-    title: '장학퀴즈',
-    subtitle: '한 문제, 한 숨',
-    icon: 'lightbulb',
-    onPress: () => router.push('/(tabs)/puzzle/quiz' as any),
-    comingSoon: true,
-  },
-];
+function formatToday(date: Date) {
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}요일`;
+}
 
 export default function PuzzleHome() {
   const scheme = useColorScheme() ?? 'light';
   const palette = Colors[scheme];
 
+  const [order, setOrder] = useState<GameId[]>(() => getRecentOrder());
+  const [activities, setActivities] = useState<Record<GameId, GameActivity | null>>(() =>
+    getAllActivities(),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setOrder(getRecentOrder());
+      setActivities(getAllActivities());
+    }, []),
+  );
+
+  const { greeting, today } = useMemo(() => {
+    const now = new Date();
+    return { greeting: greetingForHour(now.getHours()), today: formatToday(now) };
+  }, []);
+
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[Typography.display, { color: palette.text }]}>퍼즐게임</Text>
+        <Text style={[Typography.display, { color: palette.text }]}>퍼즐</Text>
         <HeaderAvatarButton />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[Typography.bodyMd, { color: palette.textMuted, marginBottom: Spacing.xxl }]}>
-          오늘의 퍼즐을 골라보세요.
-        </Text>
-
-        <View style={styles.grid}>
-          {GAMES.map((game) => (
-            <Pressable
-              key={game.id}
-              onPress={game.onPress}
-              style={({ pressed }) => [
-                styles.card,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                  opacity: pressed ? 0.85 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.iconBadge,
-                  { backgroundColor: Palette.primarySoft },
-                ]}
-              >
-                <IconSymbol name={game.icon} size={28} color={Palette.primaryPressed} />
-              </View>
-              <Text
-                style={[
-                  Typography.heading2,
-                  { color: palette.text, marginTop: Spacing.base },
-                ]}
-              >
-                {game.title}
-              </Text>
-              <Text
-                style={[
-                  Typography.bodySm,
-                  { color: palette.textMuted, marginTop: Spacing.xs },
-                ]}
-              >
-                {game.subtitle}
-              </Text>
-              {game.comingSoon ? (
-                <View
-                  style={[
-                    styles.badge,
-                    { backgroundColor: palette.background, borderColor: palette.border },
-                  ]}
-                >
-                  <Text style={[Typography.labelSm, { color: palette.textMuted }]}>
-                    준비 중
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
-          ))}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.greetingBlock}>
+          <Text style={[Typography.heading2, { color: palette.text, textAlign: 'center' }]}>
+            {greeting}
+          </Text>
+          <Text
+            style={[
+              Typography.bodyMd,
+              { color: palette.textMuted, textAlign: 'center', marginTop: Spacing.xs },
+            ]}
+          >
+            편안한 퍼즐 한 판 어떠세요?
+          </Text>
         </View>
+
+        {order.length > 0 ? (
+          <FeaturedCard
+            game={GAMES[order[0]]}
+            activity={activities[order[0]]}
+            today={today}
+          />
+        ) : null}
+
+        <View style={styles.actionRow}>
+          <ActionCard
+            label="기록"
+            icon="list.bullet"
+            onPress={() => router.push('/(tabs)/puzzle/history' as any)}
+          />
+          <ActionCard
+            label="아카이브"
+            icon="book.fill"
+            onPress={() => router.push('/(tabs)/puzzle/history' as any)}
+          />
+        </View>
+
+        {order.slice(1).map((id) => (
+          <FeaturedCard
+            key={id}
+            game={GAMES[id]}
+            activity={activities[id]}
+            today={today}
+          />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const CARD_GAP = Spacing.md;
+function FeaturedCard({
+  game,
+  activity,
+  today,
+}: {
+  game: GameMeta;
+  activity: GameActivity | null;
+  today: string;
+}) {
+  const showResume = activity?.hasInProgress && !game.comingSoon;
+  const byline = showResume
+    ? '이어하기'
+    : activity?.bestScore != null
+      ? `최고 ${activity.bestScore}점`
+      : game.defaultByline;
+
+  return (
+    <Pressable
+      onPress={game.open}
+      style={({ pressed }) => [
+        styles.featured,
+        {
+          backgroundColor: game.background,
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
+        },
+      ]}
+    >
+      <View style={styles.featuredBody}>
+        <Text style={[Typography.heading1, { color: game.foreground }]}>{game.title}</Text>
+        <Text
+          style={[
+            Typography.bodySm,
+            { color: game.mutedForeground, marginTop: Spacing.xs, maxWidth: '90%' },
+          ]}
+        >
+          {game.description}
+        </Text>
+        <View style={styles.featuredFooter}>
+          <Text style={[Typography.labelLg, { color: game.foreground }]}>{today}</Text>
+          <Text style={[Typography.labelSm, { color: game.mutedForeground }]}>{byline}</Text>
+        </View>
+      </View>
+      <View style={styles.featuredIconWrap}>
+        <IconSymbol name={game.icon} size={72} color={game.foreground} />
+        {game.comingSoon ? (
+          <View style={[styles.badge, { borderColor: game.foreground }]}>
+            <Text style={[Typography.labelSm, { color: game.foreground }]}>준비 중</Text>
+          </View>
+        ) : showResume ? (
+          <View style={[styles.badge, { borderColor: game.foreground, backgroundColor: game.foreground }]}>
+            <Text style={[Typography.labelSm, { color: game.background }]}>이어하기</Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function ActionCard({
+  label,
+  icon,
+  onPress,
+}: {
+  label: string;
+  icon: Parameters<typeof IconSymbol>[0]['name'];
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.action,
+        {
+          backgroundColor: '#A8C4F0',
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+      ]}
+    >
+      <Text style={[Typography.heading2, { color: '#1F2A44' }]}>{label}</Text>
+      <IconSymbol name={icon} size={22} color="#1F2A44" />
+    </Pressable>
+  );
+}
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
@@ -136,36 +192,59 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
-  content: { paddingHorizontal: Spacing.xxl, paddingBottom: 140 },
-  grid: {
+  content: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: 140,
+    gap: Spacing.base,
+  },
+  greetingBlock: {
+    paddingVertical: Spacing.lg,
+  },
+  featured: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: CARD_GAP,
-  },
-  card: {
-    width: '48%',
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    minHeight: 160,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+    minHeight: 150,
+    alignItems: 'stretch',
     ...Shadow.sm,
   },
-  iconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
+  featuredBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  featuredFooter: {
+    marginTop: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  featuredIconWrap: {
+    width: 96,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.sm,
   },
   badge: {
-    alignSelf: 'flex-start',
-    marginTop: Spacing.md,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
     borderWidth: 1,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: Spacing.base,
+  },
+  action: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.lg,
+    minHeight: 60,
+    ...Shadow.sm,
   },
 });
