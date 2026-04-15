@@ -5,7 +5,8 @@
       "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(/opt/homebrew/bin/node --version)",
-      "Bash(/opt/homebrew/bin/npm --version)"
+      "Bash(/opt/homebrew/bin/npm --version)",
+      "Bash(eas build:list --limit 5 --non-interactive)"
     ]
   }
 }
