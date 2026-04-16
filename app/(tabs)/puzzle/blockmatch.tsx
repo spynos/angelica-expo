@@ -33,6 +33,14 @@ const SPAWN_PHASE_MS = 800;
 // human delay to register the appearance, so the ghost arrives as a separate,
 // intentional second beat.
 const GHOST_GRACE_MS = 200;
+// Asymmetric ghost stickiness. While the ghost is locked to a valid snap
+// cell, dragging into an *invalid* area must move the floating-piece center
+// more than this many cells away from that snap before we hide the ghost.
+// Snap-to-snap transitions still use the implicit 0.5-cell threshold from
+// Math.round in toGridPos. The point is: once the user has worked the piece
+// into a valid position, minor drift toward unplaceable territory shouldn't
+// flicker the preview off — the last good snap should hold on.
+const GHOST_STICKY_CELLS = 1.5;
 
 export default function BlockMatchScreen() {
   const palette = Colors[useColorScheme() ?? 'light'];
@@ -218,6 +226,10 @@ export default function BlockMatchScreen() {
 
   // Track last ghost grid position — skip canPlace re-eval within the same cell.
   const lastGhostPosRef = useRef<{ row: number; col: number } | null>(null);
+  // Last grid cell the ghost was actually shown at (placement was valid).
+  // Anchors the GHOST_STICKY_CELLS hysteresis: while finger drifts into an
+  // invalid area, keep the ghost pinned here until it strays far enough.
+  const lastValidGhostRef = useRef<{ row: number; col: number } | null>(null);
 
   // Timestamp (Date.now()) when the current drag activated. Used to gate the
   // ghost behind GHOST_GRACE_MS. Reset to null whenever no drag is in flight.
@@ -232,11 +244,13 @@ export default function BlockMatchScreen() {
     (absX: number, absY: number) => {
       if (transition !== 'idle') {
         ghostOpacity.value = 0;
+        lastValidGhostRef.current = null;
         return;
       }
       const target = toGridPos(absX, absY);
       if (!target) {
         ghostOpacity.value = 0;
+        lastValidGhostRef.current = null;
         return;
       }
       // Skip canPlace re-eval if finger is still within the same cell.
@@ -244,17 +258,58 @@ export default function BlockMatchScreen() {
       if (last?.row === target.row && last?.col === target.col) return;
       lastGhostPosRef.current = target;
 
-      if (!canPlace(state.board, state.current, target.row, target.col)) {
-        ghostOpacity.value = 0;
+      if (canPlace(state.board, state.current, target.row, target.col)) {
+        // Valid target — switch ghost immediately and remember it as the
+        // sticky anchor for any subsequent drift into invalid territory.
+        // Mutate shared values directly — UI thread picks them up next
+        // frame via GhostOverlay's useAnimatedStyle worklet, with no React
+        // re-render.
+        ghostRow.value = target.row;
+        ghostCol.value = target.col;
+        ghostOpacity.value = 1;
+        lastValidGhostRef.current = { row: target.row, col: target.col };
         return;
       }
-      // Mutate shared values directly — UI thread picks them up next frame
-      // via GhostOverlay's useAnimatedStyle worklet, with no React re-render.
-      ghostRow.value = target.row;
-      ghostCol.value = target.col;
-      ghostOpacity.value = 1;
+
+      // Invalid target — apply asymmetric hysteresis. The ghost only clears
+      // once the floating piece's center is more than GHOST_STICKY_CELLS
+      // cells (Chebyshev) from the last valid snap. This is computed from
+      // the un-rounded continuous grid position (matching toGridPos's
+      // formula, minus the Math.round).
+      const sticky = lastValidGhostRef.current;
+      if (sticky && boardOrigin) {
+        const floatingLeft = absX - floatingW / 2;
+        const floatingTop = absY - floatingH - DRAG_LIFT_PX;
+        const contCol = (floatingLeft - boardOrigin.x) / cellSize;
+        const contRow = (floatingTop + containerOffsetY - boardOrigin.y) / cellSize;
+        const drift = Math.max(
+          Math.abs(contRow - sticky.row),
+          Math.abs(contCol - sticky.col),
+        );
+        if (drift < GHOST_STICKY_CELLS) {
+          // Still within sticky radius — leave ghost pinned to last valid
+          // snap. Shared values for ghostRow/Col were already set when we
+          // last entered the valid branch, so nothing more to do here.
+          return;
+        }
+      }
+      ghostOpacity.value = 0;
+      lastValidGhostRef.current = null;
     },
-    [transition, toGridPos, state.board, state.current, ghostRow, ghostCol, ghostOpacity],
+    [
+      transition,
+      toGridPos,
+      state.board,
+      state.current,
+      ghostRow,
+      ghostCol,
+      ghostOpacity,
+      boardOrigin,
+      floatingW,
+      floatingH,
+      cellSize,
+      containerOffsetY,
+    ],
   );
 
   const handleDragStart = useCallback(() => {
@@ -273,6 +328,7 @@ export default function BlockMatchScreen() {
     (pos: { absX: number; absY: number } | null) => {
       if (!pos || transition !== 'idle') {
         lastGhostPosRef.current = null;
+        lastValidGhostRef.current = null;
         ghostOpacity.value = 0;
         return;
       }
@@ -294,6 +350,7 @@ export default function BlockMatchScreen() {
     (pos: { absX: number; absY: number } | null) => {
       ghostOpacity.value = 0;
       lastGhostPosRef.current = null;
+      lastValidGhostRef.current = null;
       if (transition !== 'idle') return;
       if (!pos) return;
       const target = toGridPos(pos.absX, pos.absY);
