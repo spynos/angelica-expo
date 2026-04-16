@@ -44,6 +44,16 @@
 
 ### Fixed
 
+- 블록매치에서 새 드래그를 시작하는 순간 **직전에 놓은 블록**이 한순간
+  플로팅 오버레이에 비치던 문제를 고쳤습니다. 기존 구현은 드래그가 활성화될 때
+  `runOnJS(setFloatingSnapshot)(null)`을 호출하면서 동시에 50 ms 페이드인을
+  시작했는데, JS 스레드의 React 커밋이 한두 프레임만 밀려도 페이드인이 진행
+  중인 오버레이가 **이전 스냅샷**을 잠깐 렌더하는 경합이 있었습니다.
+  이제는 `beginFloatingFadeIn` JS 콜백을 거쳐 (1) `setFloatingSnapshot(null)`을
+  먼저 React에 커밋하고, (2) `requestAnimationFrame` 한 틱 뒤에야
+  `withTiming(1)`을 시작합니다. 플로팅 피스 등장이 약 16 ms 늦어지는
+  대신 옛 블록이 비치는 일이 사라집니다.
+
 - 블록매치에서 피스를 보드에 놓을 때 "깜빡" 하며 배치되던 현상을 완화했습니다.
   플로팅 오버레이의 opacity를 `isDragging` 플래그에서 분리된 `floatingOpacity`
   shared value로 빼고, `useAnimatedReaction`으로 드래그 종료 시 120 ms 페이드

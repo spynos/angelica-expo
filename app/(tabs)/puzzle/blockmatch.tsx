@@ -102,25 +102,38 @@ export default function BlockMatchScreen() {
   const floatingW = floatingCols * cellSize;
   const floatingH = floatingRows * cellSize;
 
-  // Drive floatingOpacity off isDragging: instant fade-in on drag start (after
-  // a one-frame delay so React can commit the snapshot clear), timed fade-out
-  // on release. The 50 ms fade-in from 0→1 gives the JS thread a frame to
-  // apply `setFloatingSnapshot(null)` before the overlay becomes visible —
-  // otherwise the stale last-dropped snapshot would flash for a frame on the
-  // next drag's onStart.
+  // Drive floatingOpacity off isDragging. On drag start we MUST clear the
+  // just-dropped snapshot before the overlay becomes visible — otherwise the
+  // 50 ms fade-in from 0→1 would briefly render the previous (stale) piece
+  // while the JS thread catches up to the runOnJS state update. The previous
+  // approach relied on the 50 ms window being "long enough", but on a busy
+  // frame the React commit slipped past it and the old piece flashed.
+  //
+  // Fix: route the fade-in through a JS-thread callback that (1) clears the
+  // snapshot synchronously in React, then (2) schedules withTiming(1) in a
+  // requestAnimationFrame so the fade only begins on a frame where the
+  // overlay is guaranteed to render the current piece. Costs ~16 ms extra
+  // delay before the floating piece appears, which actually pairs nicely
+  // with the GHOST_GRACE_MS pacing of the drag-start sequence.
+  const beginFloatingFadeIn = useCallback(() => {
+    setFloatingSnapshot(null);
+    requestAnimationFrame(() => {
+      floatingOpacity.value = withTiming(1, { duration: 80 });
+    });
+  }, [floatingOpacity]);
+
   useAnimatedReaction(
     () => isDragging.value,
     (dragging, prev) => {
       if (dragging === prev) return;
       if (dragging) {
-        runOnJS(setFloatingSnapshot)(null);
         floatingOpacity.value = 0;
-        floatingOpacity.value = withTiming(1, { duration: 50 });
+        runOnJS(beginFloatingFadeIn)();
       } else {
         floatingOpacity.value = withTiming(0, { duration: 120 });
       }
     },
-    [],
+    [beginFloatingFadeIn],
   );
 
   // Animated style for the floating overlay — runs on UI thread, zero JS re-renders.
