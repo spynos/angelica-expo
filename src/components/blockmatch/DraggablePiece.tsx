@@ -65,6 +65,11 @@ export function DraggablePiece({
   // Keep shapeFor call so the component re-renders on rotation.
   shapeFor(piece);
 
+  // Tracks whether the pan gesture actually activated (onStart fired).
+  // Used in onFinalize to skip the drag-end callback for plain taps —
+  // otherwise every rotate tap would retrigger the fade-in animation.
+  const didDragStart = useSharedValue(false);
+
   const pan = Gesture.Pan()
     .minDistance(20)
     .enabled(enabled)
@@ -73,8 +78,10 @@ export function DraggablePiece({
       // but do NOT show it yet — onStart fires only after minDistance is met.
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
+      didDragStart.value = false;
     })
     .onStart(() => {
+      didDragStart.value = true;
       isDragging.value = true;
       opacity.value = withTiming(0, { duration: 80 });
     })
@@ -90,11 +97,12 @@ export function DraggablePiece({
     })
     .onFinalize(() => {
       isDragging.value = false;
-      // Do NOT restore opacity here — that would briefly show the old piece
-      // before React re-renders. Instead, signal the JS thread via onDragEnd
-      // so the useEffect above runs after the new piece is already rendered.
       runOnJS(onDragMove)(null);
-      runOnJS(onDragEnd)();
+      // Only signal drag-end when a real drag occurred — taps must not
+      // trigger the fade-in animation (which causes a rotation flicker).
+      if (didDragStart.value) {
+        runOnJS(onDragEnd)();
+      }
     });
 
   const tap = Gesture.Tap()
