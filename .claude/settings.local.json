@@ -33,7 +33,13 @@
       "Bash(npm ci:*)",
       "Bash(git restore:*)",
       "Bash(git checkout:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__expo-mcp__build_run",
+      "mcp__expo-mcp__build_cancel",
+      "Bash(/usr/libexec/java_home:*)",
+      "Bash(JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" npx expo:*)",
+      "Bash(ls /Users/blue/Documents/GitHub/angelica-expo/*.md)",
+      "Bash(adb uninstall:*)"
     ]
   }
 }
