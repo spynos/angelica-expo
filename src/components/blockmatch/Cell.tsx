@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Radius } from '@/constants/theme';
@@ -14,7 +15,7 @@ const OBSTACLE_COLOR: Record<ObstacleId, string> = {
   composite: '#3D3B38',
 };
 
-export function BlockmatchCell({
+export const BlockmatchCell = memo(function BlockmatchCell({
   cell,
   size,
   ghost,
@@ -72,7 +73,7 @@ export function BlockmatchCell({
       </View>
     </View>
   );
-}
+});
 
 function Stripes({ label }: { label: string }) {
   return (

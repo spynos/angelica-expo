@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
 
 import { Colors, Spacing } from '@/constants/theme';
@@ -48,8 +49,25 @@ export default function BlockMatchScreen() {
   const [ghost, setGhost] = useState<GhostPlacement>(null);
   const [transition, setTransition] = useState<BoardTransition>('idle');
 
-  // Finger position reported by DraggablePiece during an active drag.
-  const [dragPos, setDragPos] = useState<{ absX: number; absY: number } | null>(null);
+  // Shared values for floating piece — updated on UI thread, no React re-renders.
+  const dragAbsX = useSharedValue(0);
+  const dragAbsY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+
+  // Floating piece dimensions — board cellSize for visual consistency with ghost.
+  const floatingShape = shapeFor(state.current);
+  const { rows: floatingRows, cols: floatingCols } = shapeBounds(floatingShape);
+  const floatingW = floatingCols * cellSize;
+  const floatingH = floatingRows * cellSize;
+
+  // Animated style for the floating overlay — runs on UI thread, zero JS re-renders.
+  const floatingAnimStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    zIndex: 999,
+    left: dragAbsX.value - floatingW / 2,
+    top: dragAbsY.value - floatingH - DRAG_LIFT_PX,
+    opacity: isDragging.value ? 1 : 0,
+  }));
 
   useEffect(() => {
     if (!lastTurn?.stageCleared) return;
@@ -83,12 +101,6 @@ export default function BlockMatchScreen() {
     });
   }, []);
 
-  // Floating piece dimensions — board cellSize for visual consistency with ghost.
-  const floatingShape = shapeFor(state.current);
-  const { rows: floatingRows, cols: floatingCols } = shapeBounds(floatingShape);
-  const floatingW = floatingCols * cellSize;
-  const floatingH = floatingRows * cellSize;
-
   /**
    * Convert finger absolute coords → board grid position using the SAME formula
    * as the floating piece overlay, so ghost always matches what the user sees.
@@ -112,18 +124,27 @@ export default function BlockMatchScreen() {
       const row = Math.round((floatingTop + containerOffsetY - boardOrigin.y) / cellSize);
       return { row, col };
     },
-    [boardOrigin, floatingW, floatingH, cellSize],
+    [boardOrigin, floatingW, floatingH, cellSize, containerOffsetY],
   );
+
+  // Track last ghost grid position — skip setGhost when finger is within the same cell.
+  const lastGhostPosRef = useRef<{ row: number; col: number } | null>(null);
 
   const handleDragMove = useCallback(
     (pos: { absX: number; absY: number } | null) => {
-      setDragPos(pos);
       if (!pos || transition !== 'idle') {
+        lastGhostPosRef.current = null;
         setGhost(null);
         return;
       }
       const target = toGridPos(pos.absX, pos.absY);
       if (!target) { setGhost(null); return; }
+
+      // Only re-render when the finger crosses a cell boundary.
+      const last = lastGhostPosRef.current;
+      if (last?.row === target.row && last?.col === target.col) return;
+      lastGhostPosRef.current = target;
+
       setGhost({ piece: state.current, row: target.row, col: target.col });
     },
     [toGridPos, state.current, transition],
@@ -132,6 +153,7 @@ export default function BlockMatchScreen() {
   const handleDrop = useCallback(
     (pos: { absX: number; absY: number } | null) => {
       setGhost(null);
+      lastGhostPosRef.current = null;
       if (transition !== 'idle') return;
       if (!pos) return;
       const target = toGridPos(pos.absX, pos.absY);
@@ -171,27 +193,19 @@ export default function BlockMatchScreen() {
           next={state.next}
           cellSize={trayCellSize}
           enabled={transition === 'idle' && !state.isOver}
+          dragX={dragAbsX}
+          dragY={dragAbsY}
+          isDragging={isDragging}
           onDrop={handleDrop}
           onRotate={handleRotate}
           onDragMove={handleDragMove}
         />
       </View>
 
-      {/* Floating drag piece — rendered above everything, follows finger */}
-      {dragPos && (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.floatingPiece,
-            {
-              left: dragPos.absX - floatingW / 2,
-              top: dragPos.absY - floatingH - DRAG_LIFT_PX,
-            },
-          ]}
-        >
-          <PieceShapeView piece={state.current} cellSize={cellSize} />
-        </View>
-      )}
+      {/* Floating drag piece — Animated.View driven by shared values, no JS re-renders */}
+      <Animated.View pointerEvents="none" style={floatingAnimStyle}>
+        <PieceShapeView piece={state.current} cellSize={cellSize} />
+      </Animated.View>
 
       <GameOverSheet
         visible={state.isOver}
@@ -216,9 +230,5 @@ const styles = StyleSheet.create({
   trayWrap: {
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.base,
-  },
-  floatingPiece: {
-    position: 'absolute',
-    zIndex: 999,
   },
 });

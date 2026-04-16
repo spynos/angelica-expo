@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 import { Radius, Spacing } from '@/constants/theme';
 import type { ActivePiece } from '@/src/lib/blockmatch/types';
@@ -11,6 +12,9 @@ export function PieceTray({
   next,
   cellSize,
   enabled,
+  dragX,
+  dragY,
+  isDragging,
   onDrop,
   onRotate,
   onDragMove,
@@ -19,6 +23,9 @@ export function PieceTray({
   next: [ActivePiece, ActivePiece];
   cellSize: number;
   enabled: boolean;
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  isDragging: SharedValue<boolean>;
   onDrop: (pos: { absX: number; absY: number } | null) => void;
   onRotate: () => void;
   onDragMove: (pos: { absX: number; absY: number } | null) => void;
@@ -30,6 +37,9 @@ export function PieceTray({
           piece={current}
           cellSize={cellSize}
           enabled={enabled}
+          dragX={dragX}
+          dragY={dragY}
+          isDragging={isDragging}
           onDrop={onDrop}
           onTap={onRotate}
           onDragMove={onDragMove}

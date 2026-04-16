@@ -1,4 +1,4 @@
-import { forwardRef, useEffect } from 'react';
+import { forwardRef, memo, useEffect, useMemo } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Radius } from '@/constants/theme';
-import { canPlace, idx } from '@/src/lib/blockmatch/board';
+import { canPlace } from '@/src/lib/blockmatch/board';
 import { BOARD_SIZE, type ActivePiece, type Cell } from '@/src/lib/blockmatch/types';
 
 import { BlockmatchCell } from './Cell';
@@ -35,18 +35,33 @@ export const Board = forwardRef<
     onLayout?: (e: LayoutChangeEvent) => void;
   }
 >(function Board({ board, cellSize, ghost, transition, onLayout }, ref) {
-  const ghostCells = new Set<number>();
-  let ghostInvalid = false;
-  if (ghost && transition === 'idle') {
-    if (!canPlace(board, ghost.piece, ghost.row, ghost.col)) ghostInvalid = true;
-    for (const [dr, dc] of shapeFor(ghost.piece)) {
-      const r = ghost.row + dr;
-      const c = ghost.col + dc;
-      if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-        ghostCells.add(idx(r, c));
+  // Per-row ghost bitmask: bit c is set when column c is a ghost cell in that row.
+  // Numbers are primitive — BoardRow.memo can compare by value.
+  const rowGhostMasks = useMemo(() => {
+    const masks = new Array<number>(BOARD_SIZE).fill(0);
+    if (ghost && transition === 'idle') {
+      for (const [dr, dc] of shapeFor(ghost.piece)) {
+        const r = ghost.row + dr;
+        const c = ghost.col + dc;
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+          masks[r] |= (1 << c);
+        }
       }
     }
-  }
+    return masks;
+  }, [ghost, transition]);
+
+  const ghostInvalid = useMemo(() => {
+    if (!ghost || transition !== 'idle') return false;
+    return !canPlace(board, ghost.piece, ghost.row, ghost.col);
+  }, [ghost, transition, board]);
+
+  // Pre-slice board rows so BoardRow receives a stable array reference that only
+  // changes when the board state itself changes (not on every drag frame).
+  const boardRows = useMemo(
+    () => Array.from({ length: BOARD_SIZE }, (_, r) => board.slice(r * BOARD_SIZE, (r + 1) * BOARD_SIZE)),
+    [board],
+  );
 
   return (
     <View
@@ -61,14 +76,14 @@ export const Board = forwardRef<
         },
       ]}
     >
-      {Array.from({ length: BOARD_SIZE }, (_, r) => (
+      {boardRows.map((cells, r) => (
         <BoardRow
           key={r}
           rowIdx={r}
-          cells={board.slice(r * BOARD_SIZE, (r + 1) * BOARD_SIZE)}
+          cells={cells}
           baseIdx={r * BOARD_SIZE}
           cellSize={cellSize}
-          ghostCells={ghostCells}
+          ghostMask={rowGhostMasks[r]}
           ghostInvalid={ghostInvalid}
           transition={transition}
         />
@@ -77,12 +92,12 @@ export const Board = forwardRef<
   );
 });
 
-function BoardRow({
+const BoardRow = memo(function BoardRow({
   rowIdx,
   cells,
   baseIdx,
   cellSize,
-  ghostCells,
+  ghostMask,
   ghostInvalid,
   transition,
 }: {
@@ -90,7 +105,7 @@ function BoardRow({
   cells: Cell[];
   baseIdx: number;
   cellSize: number;
-  ghostCells: Set<number>;
+  ghostMask: number;
   ghostInvalid: boolean;
   transition: BoardTransition;
 }) {
@@ -123,13 +138,13 @@ function BoardRow({
           key={c}
           cell={cell}
           size={cellSize}
-          ghost={ghostCells.has(baseIdx + c)}
+          ghost={!!(ghostMask & (1 << c))}
           invalidGhost={ghostInvalid}
         />
       ))}
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   board: {

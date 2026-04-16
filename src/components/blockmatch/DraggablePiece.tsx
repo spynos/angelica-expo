@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import type { ActivePiece } from '@/src/lib/blockmatch/types';
@@ -21,6 +22,9 @@ export function DraggablePiece({
   piece,
   cellSize,
   enabled,
+  dragX,
+  dragY,
+  isDragging,
   onDrop,
   onTap,
   onDragMove,
@@ -28,9 +32,14 @@ export function DraggablePiece({
   piece: ActivePiece;
   cellSize: number;
   enabled: boolean;
+  /** Shared values written on the UI thread — drive the floating piece without JS re-renders. */
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  isDragging: SharedValue<boolean>;
   /** Called with raw finger coords on pan end. Parent computes grid position. */
   onDrop: (pos: { absX: number; absY: number } | null) => void;
   onTap: () => void;
+  /** Called via runOnJS on every pan update (for ghost) and null on release. */
   onDragMove: (pos: { absX: number; absY: number } | null) => void;
 }) {
   const opacity = useSharedValue(1);
@@ -48,15 +57,21 @@ export function DraggablePiece({
     .minDistance(2)
     .enabled(enabled)
     .onBegin(() => {
+      isDragging.value = true;
       opacity.value = withTiming(0.15, { duration: 80 });
     })
     .onUpdate((e) => {
+      // Update position on UI thread — no runOnJS, no React re-render for position.
+      dragX.value = e.absoluteX;
+      dragY.value = e.absoluteY;
+      // Ghost grid computation still needs JS thread.
       runOnJS(onDragMove)({ absX: e.absoluteX, absY: e.absoluteY });
     })
     .onEnd((e) => {
       runOnJS(onDrop)({ absX: e.absoluteX, absY: e.absoluteY });
     })
     .onFinalize(() => {
+      isDragging.value = false;
       opacity.value = withTiming(1, { duration: 150 });
       runOnJS(onDragMove)(null);
     });
