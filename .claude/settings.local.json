@@ -26,7 +26,13 @@
       "Bash(mkdir -p /Users/blue/Documents/GitHub/angelica-expo/docs)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "WebFetch(domain:expo.dev)",
+      "Bash(npx expo-doctor:*)",
+      "Bash(claude mcp:*)",
+      "Bash(npm ci:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
