@@ -9,7 +9,12 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# EAS
+eas-build-*
+
+# Native — generated folders & artifacts
+/ios
+/android
 .kotlin/
 *.orig.*
 *.jks
@@ -21,14 +26,22 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# debug / logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
 # macOS
 .DS_Store
 *.pem
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Linux
+*~
 
 # local env files
 .env
@@ -38,8 +51,18 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-app-example
+# IDE / editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
 
-# generated native folders
-/ios
-/android
+# Claude Code
+.claude/worktrees/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Expo template
+app-example
