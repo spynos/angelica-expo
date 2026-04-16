@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
@@ -37,10 +37,23 @@ export default function BlockMatchScreen() {
     return () => finalize();
   }, [start, finalize]);
 
-  const screenWidth = Dimensions.get('window').width;
+  const { width: screenWidth } = useWindowDimensions();
   const horizontalPadding = Spacing.base;
   const cellSize = Math.floor((screenWidth - horizontalPadding * 2) / BOARD_SIZE);
-  const trayCellSize = Math.min(28, cellSize - 2);
+
+  // Responsive tray layout: preview slots are sized proportional to screen width
+  // (clamped for small/large devices), and the current-piece slot fills the
+  // remaining horizontal space. Individual cell sizes are computed inside
+  // PieceTray from each piece's bounding box so pieces always fit their slot.
+  const previewSlotSize = Math.min(96, Math.max(60, Math.round(screenWidth * 0.2)));
+  const trayAvailWidth = screenWidth - horizontalPadding * 2;
+  const currentSlotWidth = Math.max(
+    120,
+    trayAvailWidth - previewSlotSize * 2 - Spacing.sm - Spacing.base,
+  );
+  const currentSlotHeight = Math.max(104, Math.round(previewSlotSize * 1.5));
+  const maxTrayCellSize = Math.max(14, cellSize - 2);
+  const maxPreviewCellSize = Math.max(10, Math.round(maxTrayCellSize * 0.65));
 
   const boardRef = useRef<View>(null);
   const containerRef = useRef<View>(null);
@@ -196,7 +209,11 @@ export default function BlockMatchScreen() {
         <PieceTray
           current={state.current}
           next={state.next}
-          cellSize={trayCellSize}
+          currentSlotWidth={currentSlotWidth}
+          currentSlotHeight={currentSlotHeight}
+          previewSlotSize={previewSlotSize}
+          maxCellSize={maxTrayCellSize}
+          maxPreviewCellSize={maxPreviewCellSize}
           enabled={transition === 'idle' && !state.isOver}
           dragX={dragAbsX}
           dragY={dragAbsY}
