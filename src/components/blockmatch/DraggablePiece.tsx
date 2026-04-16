@@ -56,7 +56,9 @@ export function DraggablePiece({
   const pan = Gesture.Pan()
     .minDistance(2)
     .enabled(enabled)
-    .onBegin(() => {
+    .onBegin((e) => {
+      dragX.value = e.absoluteX;
+      dragY.value = e.absoluteY;
       isDragging.value = true;
       opacity.value = withTiming(0.15, { duration: 80 });
     })
