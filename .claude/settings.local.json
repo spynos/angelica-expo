@@ -42,7 +42,8 @@
       "Bash(adb uninstall:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(wc -l /Users/blue/Documents/GitHub/penta_block_blast/lib/**/*.dart)",
-      "Bash(ls *.md)"
+      "Bash(ls *.md)",
+      "Bash(grep:*)"
     ]
   }
 }
