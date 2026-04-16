@@ -42,16 +42,17 @@ export default function BlockMatchScreen() {
   const cellSize = Math.floor((screenWidth - horizontalPadding * 2) / BOARD_SIZE);
 
   // Responsive tray layout: preview slots are sized proportional to screen width
-  // (clamped for small/large devices), and the current-piece slot fills the
-  // remaining horizontal space. Individual cell sizes are computed inside
-  // PieceTray from each piece's bounding box so pieces always fit their slot.
+  // (clamped for small/large devices), and the current-piece slot is a square
+  // whose side fills the remaining horizontal space (capped on large screens).
+  // Keeping the slot square ensures a piece's cell size stays constant across
+  // rotations — a 1×5 line looks the same before and after a 90° turn.
+  // Individual cell sizes are computed inside PieceTray from each piece's
+  // bounding box so pieces always fit their slot.
   const previewSlotSize = Math.min(96, Math.max(60, Math.round(screenWidth * 0.2)));
   const trayAvailWidth = screenWidth - horizontalPadding * 2;
-  const currentSlotWidth = Math.max(
-    120,
-    trayAvailWidth - previewSlotSize * 2 - Spacing.sm - Spacing.base,
-  );
-  const currentSlotHeight = Math.max(104, Math.round(previewSlotSize * 1.5));
+  const availableForCurrent =
+    trayAvailWidth - previewSlotSize * 2 - Spacing.sm - Spacing.base;
+  const currentSlotSize = Math.max(120, Math.min(availableForCurrent, 220));
   const maxTrayCellSize = Math.max(14, cellSize - 2);
   const maxPreviewCellSize = Math.max(10, Math.round(maxTrayCellSize * 0.65));
 
@@ -209,8 +210,7 @@ export default function BlockMatchScreen() {
         <PieceTray
           current={state.current}
           next={state.next}
-          currentSlotWidth={currentSlotWidth}
-          currentSlotHeight={currentSlotHeight}
+          currentSlotSize={currentSlotSize}
           previewSlotSize={previewSlotSize}
           maxCellSize={maxTrayCellSize}
           maxPreviewCellSize={maxPreviewCellSize}

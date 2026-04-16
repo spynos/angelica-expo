@@ -31,8 +31,7 @@ function fitCellSize(
 export function PieceTray({
   current,
   next,
-  currentSlotWidth,
-  currentSlotHeight,
+  currentSlotSize,
   previewSlotSize,
   maxCellSize,
   maxPreviewCellSize,
@@ -48,8 +47,8 @@ export function PieceTray({
 }: {
   current: ActivePiece;
   next: [ActivePiece, ActivePiece];
-  currentSlotWidth: number;
-  currentSlotHeight: number;
+  /** Square side length of the current-piece slot — keeps cell size stable on rotation. */
+  currentSlotSize: number;
   previewSlotSize: number;
   maxCellSize: number;
   maxPreviewCellSize: number;
@@ -65,8 +64,8 @@ export function PieceTray({
 }) {
   const currentCell = fitCellSize(
     current,
-    currentSlotWidth,
-    currentSlotHeight,
+    currentSlotSize,
+    currentSlotSize,
     CURRENT_SLOT_PADDING,
     maxCellSize,
   );
@@ -76,7 +75,7 @@ export function PieceTray({
       <View
         style={[
           styles.currentSlot,
-          { width: currentSlotWidth, height: currentSlotHeight },
+          { width: currentSlotSize, height: currentSlotSize },
         ]}
       >
         <DraggablePiece
