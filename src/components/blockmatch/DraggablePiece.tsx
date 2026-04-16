@@ -60,7 +60,7 @@ export function DraggablePiece({
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
       isDragging.value = true;
-      opacity.value = withTiming(0.15, { duration: 80 });
+      opacity.value = withTiming(0, { duration: 80 });
     })
     .onUpdate((e) => {
       // Update position on UI thread — no runOnJS, no React re-render for position.
