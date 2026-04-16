@@ -16,6 +16,13 @@
 
 ### Changed
 
+- 블록매치 게임의 드래그 조작감을 개선했습니다. 트레이의 블록을 보드로
+  옮길 때 손가락 위쪽 180px 위치에 실제 배치 모습이 떠다니고(플로팅
+  오버레이), 보드 격자에 스냅된 고스트 프리뷰가 별도로 표시됩니다.
+  손가락에 가려지지 않으면서 정확한 배치 위치를 미리 볼 수 있도록
+  두 단계 시각 피드백 구조로 재설계했습니다. SafeAreaView 헤더
+  오프셋을 보정해 고스트가 플로팅 블록과 정확히 겹치도록 했습니다.
+
 - `expo prebuild` 시 Gradle wrapper 버전을 8.13으로 고정하는 config plugin
   (`plugins/with-gradle-version.js`)을 추가했습니다. Expo SDK 55 플러그인들이
   Gradle 9.0.0의 breaking change(`IBM_SEMERU` 제거)와 호환되지 않아 로컬
