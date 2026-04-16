@@ -32,6 +32,18 @@
 
 ### Fixed
 
+- 블록매치에서 피스를 보드에 놓을 때 "깜빡" 하며 배치되던 현상을 완화했습니다.
+  플로팅 오버레이의 opacity를 `isDragging` 플래그에서 분리된 `floatingOpacity`
+  shared value로 빼고, `useAnimatedReaction`으로 드래그 종료 시 120 ms 페이드
+  아웃을 걸었습니다. 또한 `handleDrop`에서 `dispatch('place')` 직전에 현재 피스를
+  `floatingSnapshot` state에 고정해, 디스패치로 `state.current`가 다음 큐 피스로
+  바뀌어도 페이드 중인 오버레이는 **방금 놓은 피스**를 계속 렌더합니다. 이전
+  구현은 `state.current`를 그대로 쓰다 보니, 페이드아웃이 끝나기 전에 다음 피스가
+  드롭 위치에 한 프레임 번쩍 뜨는 글리치가 있었습니다. 스냅샷은 다음 드래그
+  시작 시 같은 `useAnimatedReaction`이 `runOnJS`로 초기화합니다 — 드래그 시작
+  페이드인을 50 ms로 두어, React가 `setFloatingSnapshot(null)`을 커밋하기 전에
+  오버레이가 보이지 않도록 했습니다.
+
 - 블록매치에서 새 피스가 큐에 등장할 때 가끔 회전된 모습으로 또는 회전 중인
   채로 등장하던 현상을 수정했습니다. 기존 회전 useEffect는 "새 피스인지"를
   `piece.defId !== basePiece.defId`로만 판정했는데, 직전 피스와 같은 `defId`가

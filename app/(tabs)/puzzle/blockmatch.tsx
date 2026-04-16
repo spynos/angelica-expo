@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
 
 import { Colors, Spacing } from '@/constants/theme';
@@ -17,7 +23,7 @@ import { PieceTray } from '@/src/components/blockmatch/PieceTray';
 import { PieceShapeView, shapeBounds, shapeFor } from '@/src/components/blockmatch/PieceShape';
 import { ScorePanel } from '@/src/components/blockmatch/ScorePanel';
 import { canPlace } from '@/src/lib/blockmatch/board';
-import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
+import { BOARD_SIZE, type ActivePiece } from '@/src/lib/blockmatch/types';
 import { useBlockMatch } from '@/src/store/blockmatch';
 
 const CLEAR_PHASE_MS = 800;
@@ -68,12 +74,47 @@ export default function BlockMatchScreen() {
   const dragAbsX = useSharedValue(0);
   const dragAbsY = useSharedValue(0);
   const isDragging = useSharedValue(false);
+  // Opacity is animated separately from the isDragging flag so we can fade the
+  // overlay out over 120 ms after release. That fade masks the 1–2 frame gap
+  // between the JS-thread board update (ghost → placed block) and the UI
+  // thread catching up, which otherwise read as a "blink" on the board.
+  const floatingOpacity = useSharedValue(0);
+
+  // Snapshot of the piece that was just dropped. While fading out, the overlay
+  // renders this snapshot instead of `state.current` — because `dispatch('place')`
+  // advances `state.current` to the next queued piece, and without the snapshot
+  // the fading overlay would briefly flash the *next* piece at the drop
+  // position before vanishing. Cleared on the next drag start via the
+  // useAnimatedReaction below so subsequent drags pick up the new tray piece.
+  const [floatingSnapshot, setFloatingSnapshot] = useState<ActivePiece | null>(null);
+  const floatingPiece = floatingSnapshot ?? state.current;
 
   // Floating piece dimensions — board cellSize for visual consistency with ghost.
-  const floatingShape = shapeFor(state.current);
+  const floatingShape = shapeFor(floatingPiece);
   const { rows: floatingRows, cols: floatingCols } = shapeBounds(floatingShape);
   const floatingW = floatingCols * cellSize;
   const floatingH = floatingRows * cellSize;
+
+  // Drive floatingOpacity off isDragging: instant fade-in on drag start (after
+  // a one-frame delay so React can commit the snapshot clear), timed fade-out
+  // on release. The 50 ms fade-in from 0→1 gives the JS thread a frame to
+  // apply `setFloatingSnapshot(null)` before the overlay becomes visible —
+  // otherwise the stale last-dropped snapshot would flash for a frame on the
+  // next drag's onStart.
+  useAnimatedReaction(
+    () => isDragging.value,
+    (dragging, prev) => {
+      if (dragging === prev) return;
+      if (dragging) {
+        runOnJS(setFloatingSnapshot)(null);
+        floatingOpacity.value = 0;
+        floatingOpacity.value = withTiming(1, { duration: 50 });
+      } else {
+        floatingOpacity.value = withTiming(0, { duration: 120 });
+      }
+    },
+    [],
+  );
 
   // Animated style for the floating overlay — runs on UI thread, zero JS re-renders.
   const floatingAnimStyle = useAnimatedStyle(() => ({
@@ -81,7 +122,7 @@ export default function BlockMatchScreen() {
     zIndex: 999,
     left: dragAbsX.value - floatingW / 2,
     top: dragAbsY.value - floatingH - DRAG_LIFT_PX,
-    opacity: isDragging.value ? 1 : 0,
+    opacity: floatingOpacity.value,
   }));
 
   useEffect(() => {
@@ -174,6 +215,12 @@ export default function BlockMatchScreen() {
       const target = toGridPos(pos.absX, pos.absY);
       if (!target) return;
       if (!canPlace(state.board, state.current, target.row, target.col)) return;
+      // Lock the floating overlay to the piece we're about to dispatch —
+      // otherwise, once `state.current` advances to the next queued piece,
+      // the still-fading overlay would briefly render the next piece at the
+      // drop position. The snapshot is cleared on the next drag start via
+      // the useAnimatedReaction on isDragging.
+      setFloatingSnapshot(state.current);
       dispatch({ type: 'place', row: target.row, col: target.col });
     },
     [dispatch, state.board, state.current, transition, toGridPos],
@@ -226,9 +273,11 @@ export default function BlockMatchScreen() {
         />
       </View>
 
-      {/* Floating drag piece — Animated.View driven by shared values, no JS re-renders */}
+      {/* Floating drag piece — Animated.View driven by shared values, no JS re-renders.
+          `floatingPiece` prefers the snapshot during drop-fade so the next piece
+          (which dispatch() advances `state.current` to) doesn't flash here. */}
       <Animated.View pointerEvents="none" style={floatingAnimStyle}>
-        <PieceShapeView piece={state.current} cellSize={cellSize} />
+        <PieceShapeView piece={floatingPiece} cellSize={cellSize} />
       </Animated.View>
 
       <GameOverSheet
