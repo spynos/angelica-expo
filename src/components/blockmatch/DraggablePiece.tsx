@@ -66,11 +66,15 @@ export function DraggablePiece({
   shapeFor(piece);
 
   const pan = Gesture.Pan()
-    .minDistance(2)
+    .minDistance(20)
     .enabled(enabled)
     .onBegin((e) => {
+      // Pre-set position so the floating piece is ready if the gesture activates,
+      // but do NOT show it yet — onStart fires only after minDistance is met.
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
+    })
+    .onStart(() => {
       isDragging.value = true;
       opacity.value = withTiming(0, { duration: 80 });
     })
