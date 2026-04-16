@@ -9,6 +9,7 @@ import Animated, {
 
 import { Radius } from '@/constants/theme';
 import { canPlace } from '@/src/lib/blockmatch/board';
+import { highlightColorForPieceId } from '@/src/lib/blockmatch/colors';
 import { BOARD_SIZE, type ActivePiece, type Cell } from '@/src/lib/blockmatch/types';
 
 import { BlockmatchCell } from './Cell';
@@ -51,9 +52,13 @@ export const Board = forwardRef<
     return masks;
   }, [ghost, transition]);
 
-  const ghostInvalid = useMemo(() => {
-    if (!ghost || transition !== 'idle') return false;
-    return !canPlace(board, ghost.piece, ghost.row, ghost.col);
+  // Ghost color is the piece's own highlight tint when placement is valid; when
+  // invalid (or no ghost), we pass undefined so cells skip the ghost overlay and
+  // render their underlying state.
+  const ghostColor = useMemo(() => {
+    if (!ghost || transition !== 'idle') return undefined;
+    if (!canPlace(board, ghost.piece, ghost.row, ghost.col)) return undefined;
+    return highlightColorForPieceId(ghost.piece.defId);
   }, [ghost, transition, board]);
 
   // Pre-slice board rows so BoardRow receives a stable array reference that only
@@ -84,7 +89,7 @@ export const Board = forwardRef<
           baseIdx={r * BOARD_SIZE}
           cellSize={cellSize}
           ghostMask={rowGhostMasks[r]}
-          ghostInvalid={ghostInvalid}
+          ghostColor={ghostColor}
           transition={transition}
         />
       ))}
@@ -98,7 +103,7 @@ const BoardRow = memo(function BoardRow({
   baseIdx,
   cellSize,
   ghostMask,
-  ghostInvalid,
+  ghostColor,
   transition,
 }: {
   rowIdx: number;
@@ -106,7 +111,7 @@ const BoardRow = memo(function BoardRow({
   baseIdx: number;
   cellSize: number;
   ghostMask: number;
-  ghostInvalid: boolean;
+  ghostColor: string | undefined;
   transition: BoardTransition;
 }) {
   const opacity = useSharedValue(1);
@@ -139,7 +144,7 @@ const BoardRow = memo(function BoardRow({
           cell={cell}
           size={cellSize}
           ghost={!!(ghostMask & (1 << c))}
-          invalidGhost={ghostInvalid}
+          ghostColor={ghostColor}
         />
       ))}
     </Animated.View>

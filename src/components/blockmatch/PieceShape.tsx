@@ -1,10 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Radius } from '@/constants/theme';
+import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import { getPiece } from '@/src/lib/blockmatch/pieces';
 import type { ActivePiece, PieceShape as Shape } from '@/src/lib/blockmatch/types';
-
-import { PLAYER_BLOCK_COLOR } from './Cell';
 
 export function shapeFor(piece: ActivePiece): Shape {
   const def = getPiece(piece.defId);
@@ -20,16 +19,18 @@ export function shapeBounds(shape: Shape): { rows: number; cols: number } {
 export function PieceShapeView({
   piece,
   cellSize,
-  color = PLAYER_BLOCK_COLOR,
+  color,
   opacity = 1,
 }: {
   piece: ActivePiece;
   cellSize: number;
+  /** Override the per-piece palette color. Falls back to `colorForPieceId`. */
   color?: string;
   opacity?: number;
 }) {
   const shape = shapeFor(piece);
   const { rows, cols } = shapeBounds(shape);
+  const resolvedColor = color ?? colorForPieceId(piece.defId);
   return (
     <View
       style={{
@@ -48,7 +49,7 @@ export function PieceShapeView({
               height: cellSize - 2,
               top: r * cellSize + 1,
               left: c * cellSize + 1,
-              backgroundColor: color,
+              backgroundColor: resolvedColor,
             },
           ]}
         />

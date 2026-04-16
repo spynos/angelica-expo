@@ -2,10 +2,8 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Radius } from '@/constants/theme';
+import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import type { Cell as CellType, ObstacleId } from '@/src/lib/blockmatch/types';
-
-export const PLAYER_BLOCK_COLOR = '#2E7D6B';
-export const PLAYER_BLOCK_HIGHLIGHT = '#3E9F87';
 
 const OBSTACLE_COLOR: Record<ObstacleId, string> = {
   basic: '#5A554D',
@@ -19,12 +17,14 @@ export const BlockmatchCell = memo(function BlockmatchCell({
   cell,
   size,
   ghost,
-  invalidGhost,
+  ghostColor,
 }: {
   cell: CellType;
   size: number;
   ghost?: boolean;
-  invalidGhost?: boolean;
+  /** Highlight color for a valid ghost cell. When undefined, the ghost is hidden
+   *  (invalid placement) and the underlying cell renders normally. */
+  ghostColor?: string;
 }) {
   const dim = size - 2;
   let backgroundColor: string | undefined;
@@ -32,7 +32,7 @@ export const BlockmatchCell = memo(function BlockmatchCell({
   let label: string | undefined;
 
   if (cell.kind === 'block') {
-    backgroundColor = PLAYER_BLOCK_COLOR;
+    backgroundColor = colorForPieceId(cell.pieceId);
   } else if (cell.kind === 'obstacle') {
     backgroundColor = OBSTACLE_COLOR[cell.obstacle.id];
     if (cell.obstacle.id === 'durable2' && cell.obstacle.hp > 0) {
@@ -40,8 +40,8 @@ export const BlockmatchCell = memo(function BlockmatchCell({
     }
   }
 
-  if (ghost && !invalidGhost) {
-    backgroundColor = PLAYER_BLOCK_HIGHLIGHT;
+  if (ghost && ghostColor) {
+    backgroundColor = ghostColor;
     opacity = 0.45;
   }
 

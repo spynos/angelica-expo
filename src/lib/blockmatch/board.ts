@@ -39,7 +39,7 @@ export function applyPlace(
 ): Cell[] {
   const next = board.slice();
   for (const [dr, dc] of shapeOf(piece)) {
-    next[idx(row + dr, col + dc)] = { kind: 'block' };
+    next[idx(row + dr, col + dc)] = { kind: 'block', pieceId: piece.defId };
   }
   return next;
 }

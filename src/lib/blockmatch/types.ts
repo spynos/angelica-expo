@@ -11,7 +11,7 @@ export type ObstacleState = {
 
 export type Cell =
   | { kind: 'empty' }
-  | { kind: 'block' }
+  | { kind: 'block'; pieceId: string }
   | { kind: 'obstacle'; obstacle: ObstacleState };
 
 export type Offset = readonly [number, number];
