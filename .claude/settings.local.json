@@ -45,7 +45,8 @@
       "Bash(ls *.md)",
       "Bash(grep:*)",
       "Read(//tmp/**)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git:*)"
     ]
   }
 }
