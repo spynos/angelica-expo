@@ -6,7 +6,27 @@
       "Bash(npm run:*)",
       "Bash(/opt/homebrew/bin/node --version)",
       "Bash(/opt/homebrew/bin/npm --version)",
-      "Bash(eas build:list --limit 5 --non-interactive)"
+      "Bash(eas build:list --limit 5 --non-interactive)",
+      "Bash(npm info:*)",
+      "Bash(npm view:*)",
+      "Bash(node -e \"const v=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const versions=JSON.parse\\(v\\); console.log\\(versions.filter\\(v=>v.startsWith\\('5.'\\)\\).slice\\(-10\\)\\)\")",
+      "Bash(node -e \"const v=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const versions=JSON.parse\\(v\\); console.log\\(versions.filter\\(v=>v.startsWith\\('0.8'\\)\\).slice\\(-10\\)\\)\")",
+      "Bash(npx expo:*)",
+      "Bash(npx create-expo-app@latest --info)",
+      "Bash(npx create-expo-app:*)",
+      "Bash(rm -rf node_modules)",
+      "Bash(rm package-lock.json)",
+      "Bash(python3 -c \"import json,sys; versions=json.load\\(sys.stdin\\); print\\([v for v in versions if v.startswith\\('6.'\\)]\\)\")",
+      "Bash(npm pack:*)",
+      "Bash(node -e ':*)",
+      "Bash(node:*)",
+      "Bash(watchman watch-del:*)",
+      "Bash(watchman watch-project:*)",
+      "Bash(mkdir -p /Users/blue/Documents/GitHub/angelica-expo/.claude/commands)",
+      "Bash(mkdir -p /Users/blue/Documents/GitHub/angelica-expo/docs)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)"
     ]
   }
 }
