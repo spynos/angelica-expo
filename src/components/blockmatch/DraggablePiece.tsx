@@ -4,6 +4,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -17,6 +18,24 @@ import { PieceShapeView, shapeFor } from './PieceShape';
  * Exported so blockmatch.tsx can position the overlay and compute ghost grid coords.
  */
 export const DRAG_LIFT_PX = 180;
+
+/**
+ * Custom entering layout animation: atomically mount the shape at rotate(-90°)
+ * and spring to 0°. Runs entirely on the UI thread with guaranteed initialValues,
+ * so the new shape is never painted at 0° before the spring starts — eliminating
+ * the one-frame flash that plagued the useAnimatedStyle approach.
+ */
+function rotateInFromLeft() {
+  'worklet';
+  return {
+    initialValues: { transform: [{ rotate: '-90deg' }] },
+    animations: {
+      transform: [
+        { rotate: withSpring('0deg', { damping: 12, stiffness: 200, mass: 0.6 }) },
+      ],
+    },
+  };
+}
 
 export function DraggablePiece({
   piece,
@@ -114,10 +133,20 @@ export function DraggablePiece({
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
+  // Inner wrapper is keyed on defId+rotationIdx so it fully remounts on each
+  // rotation. The entering animation then atomically paints the new shape at
+  // rotate(-90°) and springs to 0° — no flash of the new shape at 0°.
+  // Fresh pieces (rotationIdx === 0) skip the entering animation so they just
+  // appear at rest, letting the outer opacity fade-in handle their reveal.
+  const innerKey = `${piece.defId}-${piece.rotationIdx}`;
+  const innerEntering = piece.rotationIdx > 0 ? rotateInFromLeft : undefined;
+
   return (
     <GestureDetector gesture={composed}>
       <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, animStyle]}>
-        <PieceShapeView piece={piece} cellSize={cellSize} />
+        <Animated.View key={innerKey} entering={innerEntering}>
+          <PieceShapeView piece={piece} cellSize={cellSize} />
+        </Animated.View>
       </Animated.View>
     </GestureDetector>
   );
