@@ -39,7 +39,10 @@
       "Bash(/usr/libexec/java_home:*)",
       "Bash(JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" npx expo:*)",
       "Bash(ls /Users/blue/Documents/GitHub/angelica-expo/*.md)",
-      "Bash(adb uninstall:*)"
+      "Bash(adb uninstall:*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(wc -l /Users/blue/Documents/GitHub/penta_block_blast/lib/**/*.dart)",
+      "Bash(ls *.md)"
     ]
   }
 }
