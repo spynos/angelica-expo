@@ -32,7 +32,8 @@
       "Bash(claude mcp:*)",
       "Bash(npm ci:*)",
       "Bash(git restore:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git push:*)"
     ]
   }
 }
