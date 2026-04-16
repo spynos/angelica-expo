@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -11,7 +11,7 @@ import Animated, {
 
 import type { ActivePiece } from '@/src/lib/blockmatch/types';
 
-import { PieceShapeView, shapeFor } from './PieceShape';
+import { PieceShapeView } from './PieceShape';
 
 /**
  * Pixels the floating drag piece rises above the finger.
@@ -19,23 +19,7 @@ import { PieceShapeView, shapeFor } from './PieceShape';
  */
 export const DRAG_LIFT_PX = 180;
 
-/**
- * Custom entering layout animation: atomically mount the shape at rotate(-90°)
- * and spring to 0°. Runs entirely on the UI thread with guaranteed initialValues,
- * so the new shape is never painted at 0° before the spring starts — eliminating
- * the one-frame flash that plagued the useAnimatedStyle approach.
- */
-function rotateInFromLeft() {
-  'worklet';
-  return {
-    initialValues: { transform: [{ rotate: '-90deg' }] },
-    animations: {
-      transform: [
-        { rotate: withSpring('0deg', { damping: 12, stiffness: 200, mass: 0.6 }) },
-      ],
-    },
-  };
-}
+const ROTATION_SPRING = { damping: 12, stiffness: 200, mass: 0.6 };
 
 export function DraggablePiece({
   piece,
@@ -72,6 +56,23 @@ export function DraggablePiece({
   onDragEnd: () => void;
 }) {
   const opacity = useSharedValue(1);
+  const rotation = useSharedValue(0);
+
+  /**
+   * `basePiece` is a snapshot of the active piece at the moment it arrived in
+   * the tray (its initial `rotationIdx`). On every tap, we spring `rotation`
+   * to `(piece.rotationIdx - basePiece.rotationIdx) * 90°` instead of swapping
+   * the rendered shape. Since `pureRotations` builds `rotations[i+1]` as
+   * `rotations[i]` rotated 90° CW, drawing `basePiece` rotated by N×90° is
+   * pixel-identical to drawing `rotations[i+N]` at 0°.
+   *
+   * This eliminates the per-tap unmount/mount of the inner view that
+   * previously caused flicker on rapid taps — the new mount's `entering`
+   * `initialValues` weren't always applied before paint when a fresh tap
+   * arrived mid-animation, leaving a one-frame flash. With a single mount
+   * driven by a shared value, rapid taps just retarget the same spring.
+   */
+  const [basePiece, setBasePiece] = useState(piece);
 
   // Fade-in after each drag end (restoreKey) or when a new piece arrives (defId).
   // Both changes arrive on the JS thread, so React has already re-rendered with
@@ -81,8 +82,21 @@ export function DraggablePiece({
     opacity.value = withTiming(1, { duration: 220 });
   }, [piece.defId, restoreKey, opacity]);
 
-  // Keep shapeFor call so the component re-renders on rotation.
-  shapeFor(piece);
+  // Sync rotation with piece.rotationIdx, snapping when a new piece arrives.
+  useEffect(() => {
+    if (piece.defId !== basePiece.defId) {
+      // New piece arrived (post-placement). Reset base + rotation, no animation.
+      setBasePiece(piece);
+      rotation.value = 0;
+      return;
+    }
+    const delta = piece.rotationIdx - basePiece.rotationIdx;
+    if (delta !== 0) {
+      // withSpring on the same shared value cancels any in-flight spring and
+      // retargets from the current angle — rapid taps continue smoothly.
+      rotation.value = withSpring(delta * 90, ROTATION_SPRING);
+    }
+  }, [piece, basePiece, rotation]);
 
   // Tracks whether the pan gesture actually activated (onStart fired).
   // Used in onFinalize to skip the drag-end callback for plain taps —
@@ -132,20 +146,24 @@ export function DraggablePiece({
   const composed = Gesture.Exclusive(pan, tap);
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const rotationStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
 
-  // Inner wrapper is keyed on defId+rotationIdx so it fully remounts on each
-  // rotation. The entering animation then atomically paints the new shape at
-  // rotate(-90°) and springs to 0° — no flash of the new shape at 0°.
-  // Fresh pieces (rotationIdx === 0) skip the entering animation so they just
-  // appear at rest, letting the outer opacity fade-in handle their reveal.
-  const innerKey = `${piece.defId}-${piece.rotationIdx}`;
-  const innerEntering = piece.rotationIdx > 0 ? rotateInFromLeft : undefined;
-
+  // Outer wrapper fills the parent slot so the entire tray area is a hit
+  // target for tap/drag gestures — not just the visual piece shape. The
+  // inner wrapper renders the snapshot `basePiece` rotated by `rotation`,
+  // which spring-animates to match piece.rotationIdx without re-mounting.
   return (
     <GestureDetector gesture={composed}>
-      <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, animStyle]}>
-        <Animated.View key={innerKey} entering={innerEntering}>
-          <PieceShapeView piece={piece} cellSize={cellSize} />
+      <Animated.View
+        style={[
+          { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+          animStyle,
+        ]}
+      >
+        <Animated.View style={rotationStyle}>
+          <PieceShapeView piece={basePiece} cellSize={cellSize} />
         </Animated.View>
       </Animated.View>
     </GestureDetector>

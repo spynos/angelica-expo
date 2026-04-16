@@ -1,6 +1,7 @@
 import { applyPlace, canPlace, canPlaceAnywhere } from './board';
 import { generateStage, mulberry32, pickPiece, seedFromString, type Rng } from './generator';
 import { clearLines } from './lineClear';
+import { getPiece } from './pieces';
 import { turnScore } from './score';
 import type { Action, ActivePiece, GameState, TurnSummary } from './types';
 
@@ -44,12 +45,16 @@ export function reduce(state: GameState, action: Action): { state: GameState; tu
   switch (action.type) {
     case 'rotate': {
       if (state.isOver) return { state };
-      const def = state.current;
-      // We need rotations.length — keep cheap by deferring to pieces module via a wrap.
-      // Caller is expected to pass valid current; rotation wraps via modulo at use time.
+      const def = getPiece(state.current.defId);
+      // No-op for pieces with a single orientation (full rotational symmetry:
+      // monomino, 2×2 square, X-pentomino). They have no other rotation to
+      // transition to, and animating one would produce a visible wobble — the
+      // shape tilts through intermediate angles and lands back where it started,
+      // which reads as a flicker.
+      if (def.rotations.length <= 1) return { state };
       const nextPieceState: ActivePiece = {
-        defId: def.defId,
-        rotationIdx: def.rotationIdx + 1,
+        defId: state.current.defId,
+        rotationIdx: state.current.rotationIdx + 1,
       };
       return { state: { ...state, current: nextPieceState } };
     }

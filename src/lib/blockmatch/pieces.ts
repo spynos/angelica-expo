@@ -21,7 +21,12 @@ function reflect(shape: PieceShape): PieceShape {
   return shape.map(([r, c]) => [r, -c] as Offset);
 }
 
-function variants(shape: PieceShape): PieceShape[] {
+/**
+ * All orientations reachable from `shape` under rotation AND reflection (up to 8).
+ * Used only for free-polyomino deduplication so that mirror-image pieces share a
+ * single canonical `freeKey` (e.g., L-pentomino and J-pentomino collapse to one).
+ */
+function allOrientations(shape: PieceShape): PieceShape[] {
   const seen = new Map<string, PieceShape>();
   let cur = normalize(shape);
   for (let i = 0; i < 4; i++) {
@@ -38,8 +43,26 @@ function variants(shape: PieceShape): PieceShape[] {
   return Array.from(seen.values());
 }
 
+/**
+ * The up-to-4 orientations reachable by pure 90° CW rotations (no reflection).
+ * Stored on each PieceDef as `rotations`, so tapping to rotate always produces
+ * a real 90° turn — never a chirality flip — which keeps the rotation animation
+ * in sync with the shape transition. Without this split, asymmetric pieces had 8
+ * `variants` and the 4th tap would mirror the piece, causing a visible flicker.
+ */
+function pureRotations(shape: PieceShape): PieceShape[] {
+  const seen = new Map<string, PieceShape>();
+  let cur = normalize(shape);
+  for (let i = 0; i < 4; i++) {
+    const n = normalize(cur);
+    seen.set(key(n), n);
+    cur = rotate(cur);
+  }
+  return Array.from(seen.values());
+}
+
 function freeKey(shape: PieceShape): string {
-  return variants(shape)
+  return allOrientations(shape)
     .map(key)
     .sort()[0];
 }
@@ -95,7 +118,7 @@ function buildAll(): PieceDef[] {
       defs.push({
         id: `P${s}-${idx}`,
         size: s as 1 | 2 | 3 | 4 | 5,
-        rotations: variants(shape),
+        rotations: pureRotations(shape),
       });
     });
   }
