@@ -44,7 +44,8 @@
       "Bash(wc -l /Users/blue/Documents/GitHub/penta_block_blast/lib/**/*.dart)",
       "Bash(ls *.md)",
       "Bash(grep:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
