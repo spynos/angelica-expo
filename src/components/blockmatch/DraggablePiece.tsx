@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -74,6 +74,18 @@ export function DraggablePiece({
    */
   const [basePiece, setBasePiece] = useState(piece);
 
+  /**
+   * Tracks the piece prop seen by the previous render. Lets us distinguish a
+   * user-initiated rotation tap (same `defId`, `rotationIdx` advanced by +1)
+   * from a fresh piece spawn (any other transition, including a new piece
+   * that happens to share the previous `defId`). Without this, a same-`defId`
+   * spawn slipped past the old `defId`-only check, leaving `basePiece` and
+   * `rotation` lingering at the previous piece's state — the new piece would
+   * either appear in a rotated pose or, if a spring was still in flight,
+   * appear to rotate by itself.
+   */
+  const prevPieceRef = useRef<ActivePiece>(piece);
+
   // Fade-in after each drag end (restoreKey) or when a new piece arrives (defId).
   // Both changes arrive on the JS thread, so React has already re-rendered with
   // the correct piece before the animation starts — no old-piece flash.
@@ -82,20 +94,33 @@ export function DraggablePiece({
     opacity.value = withTiming(1, { duration: 220 });
   }, [piece.defId, restoreKey, opacity]);
 
-  // Sync rotation with piece.rotationIdx, snapping when a new piece arrives.
+  // Sync rotation with piece.rotationIdx, snapping on every spawn so the
+  // rotation animation is reserved for user-initiated tap feedback only.
   useEffect(() => {
-    if (piece.defId !== basePiece.defId) {
-      // New piece arrived (post-placement). Reset base + rotation, no animation.
-      setBasePiece(piece);
-      rotation.value = 0;
-      return;
-    }
-    const delta = piece.rotationIdx - basePiece.rotationIdx;
-    if (delta !== 0) {
+    const prev = prevPieceRef.current;
+    prevPieceRef.current = piece;
+
+    if (piece === prev) return;
+
+    // Rotation tap: same defId AND rotationIdx incremented by exactly 1.
+    // The engine's `rotate` action always increments by 1, so this reliably
+    // distinguishes user-initiated rotation from spawns (which reset to 0).
+    if (
+      piece.defId === prev.defId &&
+      piece.rotationIdx === prev.rotationIdx + 1
+    ) {
+      const delta = piece.rotationIdx - basePiece.rotationIdx;
       // withSpring on the same shared value cancels any in-flight spring and
       // retargets from the current angle — rapid taps continue smoothly.
       rotation.value = withSpring(delta * 90, ROTATION_SPRING);
+      return;
     }
+
+    // Anything else (fresh spawn, restart, same-defId next piece): snap base
+    // and rotation so the new piece appears in its default orientation,
+    // regardless of any spring left over from the previous piece.
+    setBasePiece(piece);
+    rotation.value = 0;
   }, [piece, basePiece, rotation]);
 
   // Tracks whether the pan gesture actually activated (onStart fired).

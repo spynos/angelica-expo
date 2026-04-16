@@ -22,6 +22,17 @@
 
 ### Fixed
 
+- 블록매치에서 새 피스가 큐에 등장할 때 가끔 회전된 모습으로 또는 회전 중인
+  채로 등장하던 현상을 수정했습니다. 기존 회전 useEffect는 "새 피스인지"를
+  `piece.defId !== basePiece.defId`로만 판정했는데, 직전 피스와 같은 `defId`가
+  연속으로 뽑히면(약 5%/draw) snap 분기를 놓쳐 `basePiece`와 `rotation`이
+  이전 피스 상태로 남고, 마침 in-flight였던 스프링이 새 피스 위에서 그대로
+  진행되어 "새 피스가 회전하면서 등장하는" 듯 보였습니다. 이전 piece prop을
+  `prevPieceRef`로 추적해 **`defId`가 같고 `rotationIdx`가 정확히 +1**인 경우만
+  회전 탭으로 간주하고 그 외 모든 piece 변경은 `basePiece`·`rotation`을 snap
+  하도록 했습니다. 회전 애니메이션이 사용자 탭 피드백 전용으로만 작동하므로
+  새 피스는 항상 fade-in으로만 등장합니다.
+
 - 블록매치에서 회전 애니메이션이 끝나기 전에 빠르게 연속으로 탭할 때 발생하던
   깜박임을 수정했습니다. 기존 구조는 `innerKey`가 `defId-rotationIdx`라 매 탭마다
   inner view가 unmount/remount됐고, 직전 마운트의 entering 애니메이션이 `initialValues`
