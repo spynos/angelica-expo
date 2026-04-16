@@ -40,8 +40,8 @@ export const BlockmatchCell = memo(function BlockmatchCell({
     }
   }
 
-  if (ghost) {
-    backgroundColor = invalidGhost ? '#C0392B' : PLAYER_BLOCK_HIGHLIGHT;
+  if (ghost && !invalidGhost) {
+    backgroundColor = PLAYER_BLOCK_HIGHLIGHT;
     opacity = 0.45;
   }
 
