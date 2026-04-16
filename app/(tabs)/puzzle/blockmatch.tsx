@@ -48,6 +48,7 @@ export default function BlockMatchScreen() {
   const [containerOffsetY, setContainerOffsetY] = useState(0);
   const [ghost, setGhost] = useState<GhostPlacement>(null);
   const [transition, setTransition] = useState<BoardTransition>('idle');
+  const [dragEndKey, setDragEndKey] = useState(0);
 
   // Shared values for floating piece — updated on UI thread, no React re-renders.
   const dragAbsX = useSharedValue(0);
@@ -164,6 +165,10 @@ export default function BlockMatchScreen() {
     [dispatch, state.board, state.current, transition, toGridPos],
   );
 
+  const handleDragEnd = useCallback(() => {
+    setDragEndKey((k) => k + 1);
+  }, []);
+
   const handleRotate = useCallback(() => {
     if (transition !== 'idle') return;
     dispatch({ type: 'rotate' });
@@ -196,9 +201,11 @@ export default function BlockMatchScreen() {
           dragX={dragAbsX}
           dragY={dragAbsY}
           isDragging={isDragging}
+          restoreKey={dragEndKey}
           onDrop={handleDrop}
           onRotate={handleRotate}
           onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
         />
       </View>
 

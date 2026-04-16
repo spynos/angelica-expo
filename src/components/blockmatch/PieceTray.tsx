@@ -15,9 +15,11 @@ export function PieceTray({
   dragX,
   dragY,
   isDragging,
+  restoreKey,
   onDrop,
   onRotate,
   onDragMove,
+  onDragEnd,
 }: {
   current: ActivePiece;
   next: [ActivePiece, ActivePiece];
@@ -26,9 +28,11 @@ export function PieceTray({
   dragX: SharedValue<number>;
   dragY: SharedValue<number>;
   isDragging: SharedValue<boolean>;
+  restoreKey: number;
   onDrop: (pos: { absX: number; absY: number } | null) => void;
   onRotate: () => void;
   onDragMove: (pos: { absX: number; absY: number } | null) => void;
+  onDragEnd: () => void;
 }) {
   return (
     <View style={styles.row}>
@@ -40,9 +44,11 @@ export function PieceTray({
           dragX={dragX}
           dragY={dragY}
           isDragging={isDragging}
+          restoreKey={restoreKey}
           onDrop={onDrop}
           onTap={onRotate}
           onDragMove={onDragMove}
+          onDragEnd={onDragEnd}
         />
       </View>
       <View style={styles.previews}>
