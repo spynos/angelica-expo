@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -12,17 +12,15 @@ import { router, Stack } from 'expo-router';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  Board,
-  type BoardTransition,
-  type GhostPlacement,
-} from '@/src/components/blockmatch/Board';
+import { Board, type BoardTransition } from '@/src/components/blockmatch/Board';
 import { DRAG_LIFT_PX } from '@/src/components/blockmatch/DraggablePiece';
 import { GameOverSheet } from '@/src/components/blockmatch/GameOverSheet';
+import { GhostOverlay } from '@/src/components/blockmatch/GhostOverlay';
 import { PieceTray } from '@/src/components/blockmatch/PieceTray';
 import { PieceShapeView, shapeBounds, shapeFor } from '@/src/components/blockmatch/PieceShape';
 import { ScorePanel } from '@/src/components/blockmatch/ScorePanel';
 import { canPlace } from '@/src/lib/blockmatch/board';
+import { highlightColorForPieceId } from '@/src/lib/blockmatch/colors';
 import { BOARD_SIZE, type ActivePiece } from '@/src/lib/blockmatch/types';
 import { useBlockMatch } from '@/src/store/blockmatch';
 
@@ -73,7 +71,6 @@ export default function BlockMatchScreen() {
   const containerRef = useRef<View>(null);
   const [boardOrigin, setBoardOrigin] = useState<{ x: number; y: number } | null>(null);
   const [containerOffsetY, setContainerOffsetY] = useState(0);
-  const [ghost, setGhost] = useState<GhostPlacement>(null);
   const [transition, setTransition] = useState<BoardTransition>('idle');
   const [dragEndKey, setDragEndKey] = useState(0);
 
@@ -86,6 +83,22 @@ export default function BlockMatchScreen() {
   // between the JS-thread board update (ghost → placed block) and the UI
   // thread catching up, which otherwise read as a "blink" on the board.
   const floatingOpacity = useSharedValue(0);
+
+  // Ghost (snap preview) state lives entirely in shared values so dragging
+  // across cells doesn't trigger any React render. This is the perf fix for
+  // visible jank in the snap region: the previous React-state ghost forced a
+  // Board re-render on every cell crossing, and the resulting shadow-tree
+  // commit stalled the UI thread for a frame or two. Now `evaluateGhostAt`
+  // mutates these on the JS thread (because canPlace needs board state),
+  // and the GhostOverlay below reads them in a UI-thread worklet.
+  const ghostRow = useSharedValue(0);
+  const ghostCol = useSharedValue(0);
+  const ghostOpacity = useSharedValue(0);
+
+  const ghostHighlightColor = useMemo(
+    () => highlightColorForPieceId(state.current.defId),
+    [state.current.defId],
+  );
 
   // Snapshot of the piece that was just dropped. While fading out, the overlay
   // renders this snapshot instead of `state.current` — because `dispatch('place')`
@@ -203,7 +216,7 @@ export default function BlockMatchScreen() {
     [boardOrigin, floatingW, floatingH, cellSize, containerOffsetY],
   );
 
-  // Track last ghost grid position — skip setGhost when finger is within the same cell.
+  // Track last ghost grid position — skip canPlace re-eval within the same cell.
   const lastGhostPosRef = useRef<{ row: number; col: number } | null>(null);
 
   // Timestamp (Date.now()) when the current drag activated. Used to gate the
@@ -217,16 +230,31 @@ export default function BlockMatchScreen() {
 
   const evaluateGhostAt = useCallback(
     (absX: number, absY: number) => {
-      if (transition !== 'idle') return;
+      if (transition !== 'idle') {
+        ghostOpacity.value = 0;
+        return;
+      }
       const target = toGridPos(absX, absY);
-      if (!target) { setGhost(null); return; }
-      // Only re-render when the finger crosses a cell boundary.
+      if (!target) {
+        ghostOpacity.value = 0;
+        return;
+      }
+      // Skip canPlace re-eval if finger is still within the same cell.
       const last = lastGhostPosRef.current;
       if (last?.row === target.row && last?.col === target.col) return;
       lastGhostPosRef.current = target;
-      setGhost({ piece: state.current, row: target.row, col: target.col });
+
+      if (!canPlace(state.board, state.current, target.row, target.col)) {
+        ghostOpacity.value = 0;
+        return;
+      }
+      // Mutate shared values directly — UI thread picks them up next frame
+      // via GhostOverlay's useAnimatedStyle worklet, with no React re-render.
+      ghostRow.value = target.row;
+      ghostCol.value = target.col;
+      ghostOpacity.value = 1;
     },
-    [transition, toGridPos, state.current],
+    [transition, toGridPos, state.board, state.current, ghostRow, ghostCol, ghostOpacity],
   );
 
   const handleDragStart = useCallback(() => {
@@ -245,7 +273,7 @@ export default function BlockMatchScreen() {
     (pos: { absX: number; absY: number } | null) => {
       if (!pos || transition !== 'idle') {
         lastGhostPosRef.current = null;
-        setGhost(null);
+        ghostOpacity.value = 0;
         return;
       }
       // Suppress ghost during the grace window so the floating-piece appearance
@@ -259,12 +287,12 @@ export default function BlockMatchScreen() {
       }
       evaluateGhostAt(pos.absX, pos.absY);
     },
-    [transition, evaluateGhostAt],
+    [transition, evaluateGhostAt, ghostOpacity],
   );
 
   const handleDrop = useCallback(
     (pos: { absX: number; absY: number } | null) => {
-      setGhost(null);
+      ghostOpacity.value = 0;
       lastGhostPosRef.current = null;
       if (transition !== 'idle') return;
       if (!pos) return;
@@ -279,7 +307,7 @@ export default function BlockMatchScreen() {
       setFloatingSnapshot(state.current);
       dispatch({ type: 'place', row: target.row, col: target.col });
     },
-    [dispatch, state.board, state.current, transition, toGridPos],
+    [dispatch, state.board, state.current, transition, toGridPos, ghostOpacity],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -304,14 +332,26 @@ export default function BlockMatchScreen() {
       <ScorePanel score={state.score} highScore={state.highScore} combo={state.combo} />
 
       <View style={styles.boardWrap} onLayout={measureBoard}>
-        <Board
-          ref={boardRef}
-          board={state.board}
-          cellSize={cellSize}
-          ghost={ghost}
-          transition={transition}
-          onLayout={measureBoard}
-        />
+        {/* Wrap Board + GhostOverlay in a sized container so the overlay's
+            absolute positioning is anchored to the board's top-left rather
+            than the centered/padded boardWrap. */}
+        <View style={{ width: cellSize * BOARD_SIZE, height: cellSize * BOARD_SIZE }}>
+          <Board
+            ref={boardRef}
+            board={state.board}
+            cellSize={cellSize}
+            transition={transition}
+            onLayout={measureBoard}
+          />
+          <GhostOverlay
+            piece={state.current}
+            cellSize={cellSize}
+            color={ghostHighlightColor}
+            ghostRow={ghostRow}
+            ghostCol={ghostCol}
+            ghostOpacity={ghostOpacity}
+          />
+        </View>
       </View>
 
       <View style={styles.trayWrap}>

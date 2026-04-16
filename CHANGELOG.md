@@ -32,6 +32,19 @@
 
 ### Changed
 
+- 블록매치 보드에서 피스를 끌어 옮길 때 **스냅 구간(유효 배치 영역)에서
+  플로팅 피스 이동이 끊겨 보이던 문제**를 해결했습니다. 기존엔 손가락이
+  셀 경계를 넘을 때마다 `setGhost(...)`로 React state를 갱신했고,
+  이로 인해 `Board` → `BoardRow` → `BlockmatchCell`이 재조정되며 섀도트리
+  커밋이 1~3 ms 동안 UI 스레드를 점유, Reanimated의 플로팅 피스 워크릿이
+  그 프레임을 놓쳐 끊겨 보였습니다. 이제 고스트는 React state가 아니라
+  `ghostRow`/`ghostCol`/`ghostOpacity` 셰어드 밸류로 관리되며, 새로 만든
+  `GhostOverlay`(보드 위 절대 위치 `Animated.View`)가 워크릿으로 위치를
+  갱신합니다. `Board`/`BlockmatchCell`은 더 이상 고스트 prop을 받지 않고,
+  드래그 중 보드 React 리렌더는 0회입니다 (피스 배치/스테이지 클리어 때만
+  렌더). 부수적으로 `PieceShapeView`를 `React.memo`로 감싸 잔여 재조정도
+  제거했습니다.
+
 - 블록매치에서 대기열 블록을 드래그 시작한 직후 보드의 고스트 프리뷰가
   곧장 점등되어 **블록 등장과 스냅이 한 박자로 보이던 문제**를 완화했습니다.
   드래그가 활성화된 시점에서 200 ms 동안은 `setGhost` 호출을 억제하고,

@@ -16,19 +16,13 @@ const OBSTACLE_COLOR: Record<ObstacleId, string> = {
 export const BlockmatchCell = memo(function BlockmatchCell({
   cell,
   size,
-  ghost,
-  ghostColor,
 }: {
   cell: CellType;
   size: number;
-  ghost?: boolean;
-  /** Highlight color for a valid ghost cell. When undefined, the ghost is hidden
-   *  (invalid placement) and the underlying cell renders normally. */
-  ghostColor?: string;
 }) {
   const dim = size - 2;
   let backgroundColor: string | undefined;
-  let opacity = 1;
+  const opacity = 1;
   let label: string | undefined;
 
   if (cell.kind === 'block') {
@@ -38,11 +32,6 @@ export const BlockmatchCell = memo(function BlockmatchCell({
     if (cell.obstacle.id === 'durable2' && cell.obstacle.hp > 0) {
       label = String(cell.obstacle.hp);
     }
-  }
-
-  if (ghost && ghostColor) {
-    backgroundColor = ghostColor;
-    opacity = 0.45;
   }
 
   const isHoriz = cell.kind === 'obstacle' && cell.obstacle.id === 'horiz';

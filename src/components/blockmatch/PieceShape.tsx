@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Radius } from '@/constants/theme';
@@ -16,7 +17,9 @@ export function shapeBounds(shape: Shape): { rows: number; cols: number } {
   return { rows: maxR + 1, cols: maxC + 1 };
 }
 
-export function PieceShapeView({
+// memo so parent re-renders during a drag (e.g. score updates) don't
+// reconcile the floating piece or ghost overlay views.
+export const PieceShapeView = memo(function PieceShapeView({
   piece,
   cellSize,
   color,
@@ -56,7 +59,7 @@ export function PieceShapeView({
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   cell: {
