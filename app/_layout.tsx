@@ -2,6 +2,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
 import { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,6 +24,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthBootstrap, type AuthBootstrapStatus } from '@/src/store/auth';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+if (Platform.OS === 'android') {
+  NavigationBar.setVisibilityAsync('hidden');
+  NavigationBar.setBehaviorAsync('overlay-swipe');
+}
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -81,7 +88,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack>
-        <StatusBar style="auto" />
+        <StatusBar hidden />
       </ThemeProvider>
     </GestureHandlerRootView>
   );
