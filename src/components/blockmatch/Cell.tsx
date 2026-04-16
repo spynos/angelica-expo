@@ -1,9 +1,11 @@
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
+import { Palette, Radius } from '@/constants/theme';
 import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import type { Cell as CellType, ObstacleId } from '@/src/lib/blockmatch/types';
+
+import { BeveledBlock } from './BeveledBlock';
 
 const OBSTACLE_COLOR: Record<ObstacleId, string> = {
   basic: '#5A554D',
@@ -21,45 +23,54 @@ export const BlockmatchCell = memo(function BlockmatchCell({
   size: number;
 }) {
   const dim = size - 2;
-  let backgroundColor: string | undefined;
-  const opacity = 1;
-  let label: string | undefined;
 
   if (cell.kind === 'block') {
-    backgroundColor = colorForPieceId(cell.pieceId);
-  } else if (cell.kind === 'obstacle') {
-    backgroundColor = OBSTACLE_COLOR[cell.obstacle.id];
-    if (cell.obstacle.id === 'durable2' && cell.obstacle.hp > 0) {
-      label = String(cell.obstacle.hp);
-    }
+    return (
+      <View style={[styles.wrap, { width: size, height: size }]}>
+        <BeveledBlock size={dim} color={colorForPieceId(cell.pieceId)} />
+      </View>
+    );
   }
 
-  const isHoriz = cell.kind === 'obstacle' && cell.obstacle.id === 'horiz';
-  const isVert = cell.kind === 'obstacle' && cell.obstacle.id === 'vert';
+  if (cell.kind === 'obstacle') {
+    const backgroundColor = OBSTACLE_COLOR[cell.obstacle.id];
+    const isHoriz = cell.obstacle.id === 'horiz';
+    const isVert = cell.obstacle.id === 'vert';
+    const label = cell.obstacle.id === 'durable2' && cell.obstacle.hp > 0 ? String(cell.obstacle.hp) : undefined;
 
+    return (
+      <View style={[styles.wrap, { width: size, height: size }]}>
+        <View
+          style={[
+            styles.inner,
+            {
+              width: dim,
+              height: dim,
+              backgroundColor,
+            },
+          ]}
+        >
+          {isHoriz ? <View style={styles.horizStripe} /> : null}
+          {isVert ? <View style={styles.vertStripe} /> : null}
+          {label ? (
+            <View style={styles.labelWrap}>
+              <Stripes label={label} />
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
+  // empty cell — solid darker tint reads as a grid square against the board bg.
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
       <View
         style={[
           styles.inner,
-          {
-            width: dim,
-            height: dim,
-            backgroundColor: backgroundColor ?? 'transparent',
-            borderColor: backgroundColor ? 'transparent' : '#E2DDD3',
-            borderWidth: backgroundColor ? 0 : 1,
-            opacity,
-          },
+          { width: dim, height: dim, backgroundColor: Palette.boardWarm.emptyTint },
         ]}
-      >
-        {isHoriz ? <View style={styles.horizStripe} /> : null}
-        {isVert ? <View style={styles.vertStripe} /> : null}
-        {label ? (
-          <View style={styles.labelWrap}>
-            <Stripes label={label} />
-          </View>
-        ) : null}
-      </View>
+      />
     </View>
   );
 });

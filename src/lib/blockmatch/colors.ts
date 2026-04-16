@@ -55,6 +55,52 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+/** Parse a `#rrggbb` (or `#rgb`) hex string into HSL with h ∈ [0,360), s/l ∈ [0,100]. */
+export function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  let cleaned = hex.replace('#', '').trim();
+  if (cleaned.length === 3) {
+    cleaned = cleaned
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  }
+  const r = parseInt(cleaned.slice(0, 2), 16) / 255;
+  const g = parseInt(cleaned.slice(2, 4), 16) / 255;
+  const b = parseInt(cleaned.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+        break;
+      case g:
+        h = ((b - r) / d + 2) * 60;
+        break;
+      case b:
+        h = ((r - g) / d + 4) * 60;
+        break;
+    }
+  }
+  return { h, s: s * 100, l: l * 100 };
+}
+
+/**
+ * Return a new hex string with the lightness shifted by `deltaPct` percentage
+ * points (clamped to [0, 100]). Used by the beveled block painter to derive
+ * face colors (top +15, left +6, right −15, bottom −30) from a base color.
+ */
+export function shiftLightness(hex: string, deltaPct: number): string {
+  const { h, s, l } = hexToHsl(hex);
+  const next = Math.max(0, Math.min(100, l + deltaPct));
+  return hslToHex(h, s, next);
+}
+
 function variationFor(size: 1 | 2 | 3 | 4 | 5, index: number, count: number): HSL {
   const base = BASE[size];
   if (count <= 1) return base;

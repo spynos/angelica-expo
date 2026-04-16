@@ -53,7 +53,13 @@ export const GhostOverlay = memo(function GhostOverlay({
 
   return (
     <Animated.View pointerEvents="none" style={animStyle}>
-      <PieceShapeView piece={piece} cellSize={cellSize} color={color} opacity={0.45} />
+      <PieceShapeView
+        piece={piece}
+        cellSize={cellSize}
+        color={color}
+        opacity={0.45}
+        bevelFraction={0.2}
+      />
     </Animated.View>
   );
 });

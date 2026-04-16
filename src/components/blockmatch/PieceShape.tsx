@@ -1,10 +1,11 @@
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Radius } from '@/constants/theme';
 import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import { getPiece } from '@/src/lib/blockmatch/pieces';
 import type { ActivePiece, PieceShape as Shape } from '@/src/lib/blockmatch/types';
+
+import { BeveledBlock } from './BeveledBlock';
 
 export function shapeFor(piece: ActivePiece): Shape {
   const def = getPiece(piece.defId);
@@ -24,16 +25,20 @@ export const PieceShapeView = memo(function PieceShapeView({
   cellSize,
   color,
   opacity = 1,
+  bevelFraction,
 }: {
   piece: ActivePiece;
   cellSize: number;
   /** Override the per-piece palette color. Falls back to `colorForPieceId`. */
   color?: string;
   opacity?: number;
+  /** Pass-through to BeveledBlock — ghost preview uses 0.20, default 0.18. */
+  bevelFraction?: number;
 }) {
   const shape = shapeFor(piece);
   const { rows, cols } = shapeBounds(shape);
   const resolvedColor = color ?? colorForPieceId(piece.defId);
+  const blockSize = cellSize - 2;
   return (
     <View
       style={{
@@ -45,25 +50,15 @@ export const PieceShapeView = memo(function PieceShapeView({
       {shape.map(([r, c], i) => (
         <View
           key={i}
-          style={[
-            styles.cell,
-            {
-              width: cellSize - 2,
-              height: cellSize - 2,
-              top: r * cellSize + 1,
-              left: c * cellSize + 1,
-              backgroundColor: resolvedColor,
-            },
-          ]}
-        />
+          style={{
+            position: 'absolute',
+            top: r * cellSize + 1,
+            left: c * cellSize + 1,
+          }}
+        >
+          <BeveledBlock size={blockSize} color={resolvedColor} bevelFraction={bevelFraction} />
+        </View>
       ))}
     </View>
   );
-});
-
-const styles = StyleSheet.create({
-  cell: {
-    position: 'absolute',
-    borderRadius: Radius.sm,
-  },
 });

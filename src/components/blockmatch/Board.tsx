@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Radius } from '@/constants/theme';
+import { Palette, Radius } from '@/constants/theme';
 import { BOARD_SIZE, type Cell } from '@/src/lib/blockmatch/types';
 
 import { BlockmatchCell } from './Cell';
@@ -96,7 +96,11 @@ const BoardRow = memo(function BoardRow({
 
 const styles = StyleSheet.create({
   board: {
-    backgroundColor: '#FAF7F2',
+    // Locked to a warm light tone so the play surface stays consistent across
+    // light/dark color schemes. The grid effect comes from the contrast between
+    // this lighter board bg and the slightly darker `emptyTint` painted inside
+    // each empty cell — no explicit grid lines needed.
+    backgroundColor: Palette.boardWarm.background,
     borderRadius: Radius.md,
   },
   row: {

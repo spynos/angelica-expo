@@ -9,6 +9,17 @@ export const Palette = {
   error: '#C0392B',
   success: '#2E7D6B',
   warning: '#BA7517',
+  /**
+   * Blockmatch board surface — locked to a warm light palette regardless of
+   * system color scheme. Empty cells use a slightly darker tint so the grid
+   * reads even before any blocks are placed; gridLine sits between the two
+   * for hairline separators between cells.
+   */
+  boardWarm: {
+    background: '#FAF7F2',
+    emptyTint: '#F0E9DA',
+    gridLine: '#E5DCC9',
+  },
 } as const;
 
 export type ThemePalette = {

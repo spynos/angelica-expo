@@ -9,6 +9,18 @@
 
 ### Added
 
+- 블록매치 보드/블록을 입체 베벨 디자인으로 강화했습니다. Flutter 레퍼런스
+  `penta_block_blast`의 `BeveledBlock` 알고리즘(4면 trapezoid + top-left
+  하이라이트 그라디언트)을 `react-native-svg` 로 포팅하고
+  (`src/components/blockmatch/BeveledBlock.tsx`), 베이스 색에서 면별 HSL
+  lightness 보정(top +15 / left +6 / right −15 / bottom −30)으로 광원 일관성을
+  유지합니다. 기존 사이즈별 HSL 팔레트는 그대로 두고 시각만 입체화했으며,
+  보드/트레이/고스트 프리뷰 모두 동일한 베벨 컴포넌트를 거쳐 일관된 모양을
+  보입니다(고스트는 `bevelFraction=0.20`, `opacity=0.45`). 보드 표면은
+  `Palette.boardWarm` 토큰 그룹(`background` / `emptyTint` / `gridLine`)으로
+  잠가두어 다크모드에서도 동일한 웜 라이트 톤이 유지되며, 빈 셀은 보드보다
+  살짝 어두운 `emptyTint` 로 칠해 셀 단위 그리드감을 만듭니다.
+
 - 블록매치 블록에 사이즈(=셀 갯수)별 톤을 입히는 팔레트를 추가했습니다.
   같은 갯수 블록은 같은 톤 계열(사이즈 1=코랄 피치 / 2=허니 골드 /
   3=프레시 민트 / 4=브라이트 아쿠아 / 5=라이트 라일락)로 묶이고, 같은

@@ -230,14 +230,16 @@ turnScore = (lineScore + obstacleBonus) * comboMultiplier
 - 드래그 중 두 번째 손가락 탭 회전은 추후 검토 (MVP 제외).
 
 ### 5.5 시각 디자인 토큰
-- 플레이어 블록: 단색 (`Palette.puzzle` = `#2E7D6B`) + 살짝 그라디언트 (위 밝게 → 아래 어둡게).
-- 빈 칸: `palette.surface` 위에 1px `palette.border`.
+- 플레이어 블록: 사이즈별(1~5칸) HSL 팔레트 — `src/lib/blockmatch/colors.ts` 의 `BASE` 정의 + per-shape variation. 각 셀은 `BeveledBlock` (penta_block_blast 의 `beveled_block.dart` 채용) 으로 4면 베벨 + top-left 하이라이트 페인팅. 면별 lightness 보정: top +15 / left +6 / right −15 / bottom −30.
+- 보드 배경: `Palette.boardWarm.background` (`#FAF7F2`). 다크모드에서도 항상 웜 라이트 톤 고정.
+- 빈 칸: `Palette.boardWarm.emptyTint` (`#F0E9DA`) — 보드 배경보다 살짝 어두운 tint 로 그리드감 형성.
+- 그리드라인: `Palette.boardWarm.gridLine` (`#E5DCC9`) — 명시적 보더 대신 보드 vs emptyTint 색차로 구현. 추후 hairline 보더 추가 여지.
 - 장애물 색상 (M3 확정 전 가안):
   - basic   → 진한 회색 `#5A554D`
   - horiz   → `#C8773A` (오렌지) + 가로 줄무늬
   - vert    → `#5C4A8F` (퍼플) + 세로 줄무늬
   - durable → `#A05E28` + 작은 숫자 `2`
-- 모두 그림자 최소, 약한 inner gradient.
+- 장애물 셀은 이번 라운드에서 베벨 미적용 (별도 시각 언어 유지).
 
 ### 5.6 애니메이션
 - 라인 클리어: 200ms 페이드+축소.
