@@ -10,8 +10,10 @@ import {
   type BoardTransition,
   type GhostPlacement,
 } from '@/src/components/blockmatch/Board';
+import { DRAG_LIFT_PX } from '@/src/components/blockmatch/DraggablePiece';
 import { GameOverSheet } from '@/src/components/blockmatch/GameOverSheet';
 import { PieceTray } from '@/src/components/blockmatch/PieceTray';
+import { PieceShapeView, shapeBounds, shapeFor } from '@/src/components/blockmatch/PieceShape';
 import { ScorePanel } from '@/src/components/blockmatch/ScorePanel';
 import { canPlace } from '@/src/lib/blockmatch/board';
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
@@ -38,16 +40,17 @@ export default function BlockMatchScreen() {
   const horizontalPadding = Spacing.base;
   const cellSize = Math.floor((screenWidth - horizontalPadding * 2) / BOARD_SIZE);
   const trayCellSize = Math.min(28, cellSize - 2);
-  const previewCellSize = 14;
 
   const boardRef = useRef<View>(null);
+  const containerRef = useRef<View>(null);
   const [boardOrigin, setBoardOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [containerOffsetY, setContainerOffsetY] = useState(0);
   const [ghost, setGhost] = useState<GhostPlacement>(null);
   const [transition, setTransition] = useState<BoardTransition>('idle');
 
-  // Stage transition orchestration: when a turn report arrives with stageCleared,
-  // run a clear-phase animation, dispatch commitStage to swap the board, then
-  // run the spawn-phase animation.
+  // Finger position reported by DraggablePiece during an active drag.
+  const [dragPos, setDragPos] = useState<{ absX: number; absY: number } | null>(null);
+
   useEffect(() => {
     if (!lastTurn?.stageCleared) return;
     setTransition('clearing');
@@ -74,30 +77,69 @@ export default function BlockMatchScreen() {
       boardRef.current?.measureInWindow((x, y) => {
         setBoardOrigin({ x, y });
       });
+      containerRef.current?.measureInWindow((_, y) => {
+        setContainerOffsetY(y);
+      });
     });
   }, []);
 
-  const handleHover = useCallback(
-    (target: { row: number; col: number } | null) => {
-      if (transition !== 'idle') return;
-      if (!target) {
+  // Floating piece dimensions — board cellSize for visual consistency with ghost.
+  const floatingShape = shapeFor(state.current);
+  const { rows: floatingRows, cols: floatingCols } = shapeBounds(floatingShape);
+  const floatingW = floatingCols * cellSize;
+  const floatingH = floatingRows * cellSize;
+
+  /**
+   * Convert finger absolute coords → board grid position using the SAME formula
+   * as the floating piece overlay, so ghost always matches what the user sees.
+   *
+   * Floating piece top-left (screen):
+   *   left = absX - floatingW / 2
+   *   top  = absY - floatingH - DRAG_LIFT_PX
+   *
+   * Convert to board grid:
+   *   col = round((floatingLeft - boardOrigin.x) / cellSize)
+   *   row = round((floatingTop  - boardOrigin.y) / cellSize)
+   */
+  const toGridPos = useCallback(
+    (absX: number, absY: number) => {
+      if (!boardOrigin) return null;
+      const floatingLeft = absX - floatingW / 2;
+      const floatingTop = absY - floatingH - DRAG_LIFT_PX;
+      const col = Math.round((floatingLeft - boardOrigin.x) / cellSize);
+      // containerOffsetY compensates for SafeAreaView starting below the nav header:
+      // floating piece `top` style is SafeAreaView-local, but boardOrigin.y is screen-absolute.
+      const row = Math.round((floatingTop + containerOffsetY - boardOrigin.y) / cellSize);
+      return { row, col };
+    },
+    [boardOrigin, floatingW, floatingH, cellSize],
+  );
+
+  const handleDragMove = useCallback(
+    (pos: { absX: number; absY: number } | null) => {
+      setDragPos(pos);
+      if (!pos || transition !== 'idle') {
         setGhost(null);
         return;
       }
+      const target = toGridPos(pos.absX, pos.absY);
+      if (!target) { setGhost(null); return; }
       setGhost({ piece: state.current, row: target.row, col: target.col });
     },
-    [state.current, transition],
+    [toGridPos, state.current, transition],
   );
 
   const handleDrop = useCallback(
-    (target: { row: number; col: number } | null) => {
+    (pos: { absX: number; absY: number } | null) => {
       setGhost(null);
       if (transition !== 'idle') return;
+      if (!pos) return;
+      const target = toGridPos(pos.absX, pos.absY);
       if (!target) return;
       if (!canPlace(state.board, state.current, target.row, target.col)) return;
       dispatch({ type: 'place', row: target.row, col: target.col });
     },
-    [dispatch, state.board, state.current, transition],
+    [dispatch, state.board, state.current, transition, toGridPos],
   );
 
   const handleRotate = useCallback(() => {
@@ -108,7 +150,7 @@ export default function BlockMatchScreen() {
   const isNewHigh = state.isOver && state.score > 0 && state.score >= state.highScore;
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
+    <SafeAreaView ref={containerRef as any} style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <Stack.Screen options={{ title: `블록매치 · 스테이지 ${state.stage}` }} />
       <ScorePanel score={state.score} highScore={state.highScore} combo={state.combo} />
 
@@ -128,14 +170,28 @@ export default function BlockMatchScreen() {
           current={state.current}
           next={state.next}
           cellSize={trayCellSize}
-          previewSize={previewCellSize}
-          boardOrigin={boardOrigin}
           enabled={transition === 'idle' && !state.isOver}
-          onHover={handleHover}
           onDrop={handleDrop}
           onRotate={handleRotate}
+          onDragMove={handleDragMove}
         />
       </View>
+
+      {/* Floating drag piece — rendered above everything, follows finger */}
+      {dragPos && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.floatingPiece,
+            {
+              left: dragPos.absX - floatingW / 2,
+              top: dragPos.absY - floatingH - DRAG_LIFT_PX,
+            },
+          ]}
+        >
+          <PieceShapeView piece={state.current} cellSize={cellSize} />
+        </View>
+      )}
 
       <GameOverSheet
         visible={state.isOver}
@@ -158,8 +214,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   trayWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingVertical: Spacing.base,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.base,
+  },
+  floatingPiece: {
+    position: 'absolute',
+    zIndex: 999,
   },
 });

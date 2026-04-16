@@ -11,83 +11,54 @@ import type { ActivePiece } from '@/src/lib/blockmatch/types';
 
 import { PieceShapeView, shapeFor } from './PieceShape';
 
-const VISUAL_OFFSET_PX = 16;
-const TARGET_LIFT_CELLS = 2.5;
-
-export type BoardOrigin = { x: number; y: number };
+/**
+ * Pixels the floating drag piece rises above the finger.
+ * Exported so blockmatch.tsx can position the overlay and compute ghost grid coords.
+ */
+export const DRAG_LIFT_PX = 180;
 
 export function DraggablePiece({
   piece,
   cellSize,
-  boardOrigin,
   enabled,
-  onHover,
   onDrop,
   onTap,
+  onDragMove,
 }: {
   piece: ActivePiece;
   cellSize: number;
-  boardOrigin: BoardOrigin | null;
   enabled: boolean;
-  onHover: (target: { row: number; col: number } | null) => void;
-  onDrop: (target: { row: number; col: number } | null) => void;
+  /** Called with raw finger coords on pan end. Parent computes grid position. */
+  onDrop: (pos: { absX: number; absY: number } | null) => void;
   onTap: () => void;
+  onDragMove: (pos: { absX: number; absY: number } | null) => void;
 }) {
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);
   const opacity = useSharedValue(1);
 
-  // Fade-in whenever a new piece arrives. Reset translation immediately so the
-  // previous piece's spring-back can't carry over and bounce the new arrival.
+  // Fade-in whenever a new piece arrives.
   useEffect(() => {
-    tx.value = 0;
-    ty.value = 0;
     opacity.value = 0;
     opacity.value = withTiming(1, { duration: 220 });
-  }, [piece.defId, opacity, tx, ty]);
+  }, [piece.defId, opacity]);
 
-  const targetOffsetPx = VISUAL_OFFSET_PX + TARGET_LIFT_CELLS * cellSize;
-
-  const reportHover = (absX: number, absY: number) => {
-    if (!boardOrigin) return onHover(null);
-    const localX = absX - boardOrigin.x;
-    const localY = absY - boardOrigin.y - targetOffsetPx;
-    const col = Math.floor(localX / cellSize);
-    const row = Math.floor(localY / cellSize);
-    const shape = shapeFor(piece);
-    const maxR = Math.max(...shape.map(([r]) => r));
-    const maxC = Math.max(...shape.map(([, c]) => c));
-    if (row < -maxR - 2 || col < -maxC - 2 || row > 11 || col > 11) {
-      onHover(null);
-    } else {
-      onHover({ row, col });
-    }
-  };
-
-  const reportDrop = (absX: number, absY: number) => {
-    if (!boardOrigin) return onDrop(null);
-    const localX = absX - boardOrigin.x;
-    const localY = absY - boardOrigin.y - targetOffsetPx;
-    const col = Math.floor(localX / cellSize);
-    const row = Math.floor(localY / cellSize);
-    onDrop({ row, col });
-  };
+  // Keep shapeFor call so the component re-renders on rotation.
+  shapeFor(piece);
 
   const pan = Gesture.Pan()
     .minDistance(2)
     .enabled(enabled)
+    .onBegin(() => {
+      opacity.value = withTiming(0.15, { duration: 80 });
+    })
     .onUpdate((e) => {
-      tx.value = e.translationX;
-      ty.value = e.translationY - VISUAL_OFFSET_PX;
-      runOnJS(reportHover)(e.absoluteX, e.absoluteY);
+      runOnJS(onDragMove)({ absX: e.absoluteX, absY: e.absoluteY });
     })
     .onEnd((e) => {
-      runOnJS(reportDrop)(e.absoluteX, e.absoluteY);
-      tx.value = withTiming(0, { duration: 140 });
-      ty.value = withTiming(0, { duration: 140 });
+      runOnJS(onDrop)({ absX: e.absoluteX, absY: e.absoluteY });
     })
     .onFinalize(() => {
-      runOnJS(onHover)(null);
+      opacity.value = withTiming(1, { duration: 150 });
+      runOnJS(onDragMove)(null);
     });
 
   const tap = Gesture.Tap()
@@ -97,10 +68,7 @@ export function DraggablePiece({
 
   const composed = Gesture.Exclusive(pan, tap);
 
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateX: tx.value }, { translateY: ty.value }],
-  }));
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
     <GestureDetector gesture={composed}>

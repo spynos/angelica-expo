@@ -3,29 +3,25 @@ import { StyleSheet, View } from 'react-native';
 import { Radius, Spacing } from '@/constants/theme';
 import type { ActivePiece } from '@/src/lib/blockmatch/types';
 
-import { DraggablePiece, type BoardOrigin } from './DraggablePiece';
+import { DraggablePiece } from './DraggablePiece';
 import { PieceShapeView } from './PieceShape';
 
 export function PieceTray({
   current,
   next,
   cellSize,
-  previewSize,
-  boardOrigin,
   enabled,
-  onHover,
   onDrop,
   onRotate,
+  onDragMove,
 }: {
   current: ActivePiece;
   next: [ActivePiece, ActivePiece];
   cellSize: number;
-  previewSize: number;
-  boardOrigin: BoardOrigin | null;
   enabled: boolean;
-  onHover: (target: { row: number; col: number } | null) => void;
-  onDrop: (target: { row: number; col: number } | null) => void;
+  onDrop: (pos: { absX: number; absY: number } | null) => void;
   onRotate: () => void;
+  onDragMove: (pos: { absX: number; absY: number } | null) => void;
 }) {
   return (
     <View style={styles.row}>
@@ -33,16 +29,15 @@ export function PieceTray({
         <DraggablePiece
           piece={current}
           cellSize={cellSize}
-          boardOrigin={boardOrigin}
           enabled={enabled}
-          onHover={onHover}
           onDrop={onDrop}
           onTap={onRotate}
+          onDragMove={onDragMove}
         />
       </View>
       <View style={styles.previews}>
-        <PreviewSlot piece={next[0]} cellSize={previewSize} />
-        <PreviewSlot piece={next[1]} cellSize={previewSize} />
+        <PreviewSlot piece={next[0]} cellSize={14} />
+        <PreviewSlot piece={next[1]} cellSize={14} />
       </View>
     </View>
   );
