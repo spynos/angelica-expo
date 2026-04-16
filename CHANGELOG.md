@@ -16,6 +16,11 @@
 
 ### Changed
 
+- `expo prebuild` 시 Gradle wrapper 버전을 8.13으로 고정하는 config plugin
+  (`plugins/with-gradle-version.js`)을 추가했습니다. Expo SDK 55 플러그인들이
+  Gradle 9.0.0의 breaking change(`IBM_SEMERU` 제거)와 호환되지 않아 로컬
+  Android 빌드가 실패하던 문제를 방지합니다.
+
 - Expo SDK 55에 맞춰 프로젝트 의존성을 일괄 정합화했습니다.
   `react-native` 0.81.5 → 0.83.4, `react` / `react-dom` 19.1.0 → 19.2.0,
   `react-native-worklets` 0.5.1 → 0.7.2, `react-native-reanimated` → 4.2.1,
