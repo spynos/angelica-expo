@@ -31,6 +31,7 @@ export function DraggablePiece({
   restoreKey,
   onDrop,
   onTap,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: {
@@ -50,6 +51,8 @@ export function DraggablePiece({
   /** Called with raw finger coords on pan end. Parent computes grid position. */
   onDrop: (pos: { absX: number; absY: number } | null) => void;
   onTap: () => void;
+  /** Called via runOnJS the moment the pan gesture activates (after minDistance). */
+  onDragStart?: () => void;
   /** Called via runOnJS on every pan update (for ghost) and null on release. */
   onDragMove: (pos: { absX: number; absY: number } | null) => void;
   /** Called via runOnJS when the gesture finalizes (drop or cancel). */
@@ -142,6 +145,7 @@ export function DraggablePiece({
       didDragStart.value = true;
       isDragging.value = true;
       opacity.value = withTiming(0, { duration: 80 });
+      if (onDragStart) runOnJS(onDragStart)();
     })
     .onUpdate((e) => {
       // Update position on UI thread — no runOnJS, no React re-render for position.

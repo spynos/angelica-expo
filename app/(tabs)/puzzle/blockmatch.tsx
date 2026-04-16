@@ -28,6 +28,13 @@ import { useBlockMatch } from '@/src/store/blockmatch';
 
 const CLEAR_PHASE_MS = 800;
 const SPAWN_PHASE_MS = 800;
+// How long after a drag activates we suppress the board ghost. The floating
+// piece needs a moment to be perceived as "lifted from the tray" before the
+// ghost highlight appears — otherwise the two events read as one jarring
+// "appear-and-snap" beat. ~200 ms covers the 50 ms floating fade-in plus the
+// human delay to register the appearance, so the ghost arrives as a separate,
+// intentional second beat.
+const GHOST_GRACE_MS = 200;
 
 export default function BlockMatchScreen() {
   const palette = Colors[useColorScheme() ?? 'light'];
@@ -186,6 +193,41 @@ export default function BlockMatchScreen() {
   // Track last ghost grid position — skip setGhost when finger is within the same cell.
   const lastGhostPosRef = useRef<{ row: number; col: number } | null>(null);
 
+  // Timestamp (Date.now()) when the current drag activated. Used to gate the
+  // ghost behind GHOST_GRACE_MS. Reset to null whenever no drag is in flight.
+  const dragStartedAtRef = useRef<number | null>(null);
+  // Fallback timer that fires once GHOST_GRACE_MS elapses. Needed because RNGH
+  // only emits onUpdate on finger movement — if the user grabs a piece and
+  // holds it perfectly still over a valid cell, no onUpdate would arrive after
+  // grace ends, so this timer surfaces the ghost from the last known position.
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const evaluateGhostAt = useCallback(
+    (absX: number, absY: number) => {
+      if (transition !== 'idle') return;
+      const target = toGridPos(absX, absY);
+      if (!target) { setGhost(null); return; }
+      // Only re-render when the finger crosses a cell boundary.
+      const last = lastGhostPosRef.current;
+      if (last?.row === target.row && last?.col === target.col) return;
+      lastGhostPosRef.current = target;
+      setGhost({ piece: state.current, row: target.row, col: target.col });
+    },
+    [transition, toGridPos, state.current],
+  );
+
+  const handleDragStart = useCallback(() => {
+    dragStartedAtRef.current = Date.now();
+    if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+    const t = setTimeout(() => {
+      graceTimerRef.current = null;
+      if (!isDragging.value) return;
+      evaluateGhostAt(dragAbsX.value, dragAbsY.value);
+    }, GHOST_GRACE_MS);
+    graceTimerRef.current = t;
+    timersRef.current.push(t);
+  }, [evaluateGhostAt, isDragging, dragAbsX, dragAbsY]);
+
   const handleDragMove = useCallback(
     (pos: { absX: number; absY: number } | null) => {
       if (!pos || transition !== 'idle') {
@@ -193,17 +235,18 @@ export default function BlockMatchScreen() {
         setGhost(null);
         return;
       }
-      const target = toGridPos(pos.absX, pos.absY);
-      if (!target) { setGhost(null); return; }
-
-      // Only re-render when the finger crosses a cell boundary.
-      const last = lastGhostPosRef.current;
-      if (last?.row === target.row && last?.col === target.col) return;
-      lastGhostPosRef.current = target;
-
-      setGhost({ piece: state.current, row: target.row, col: target.col });
+      // Suppress ghost during the grace window so the floating-piece appearance
+      // and the ghost don't read as a single beat. The fallback timer in
+      // handleDragStart handles the (rare) case where the user holds still.
+      if (
+        dragStartedAtRef.current !== null &&
+        Date.now() - dragStartedAtRef.current < GHOST_GRACE_MS
+      ) {
+        return;
+      }
+      evaluateGhostAt(pos.absX, pos.absY);
     },
-    [toGridPos, state.current, transition],
+    [transition, evaluateGhostAt],
   );
 
   const handleDrop = useCallback(
@@ -227,6 +270,11 @@ export default function BlockMatchScreen() {
   );
 
   const handleDragEnd = useCallback(() => {
+    dragStartedAtRef.current = null;
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
     setDragEndKey((k) => k + 1);
   }, []);
 
@@ -268,6 +316,7 @@ export default function BlockMatchScreen() {
           restoreKey={dragEndKey}
           onDrop={handleDrop}
           onRotate={handleRotate}
+          onDragStart={handleDragStart}
           onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
         />

@@ -42,6 +42,7 @@ export function PieceTray({
   restoreKey,
   onDrop,
   onRotate,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: {
@@ -59,6 +60,7 @@ export function PieceTray({
   restoreKey: number;
   onDrop: (pos: { absX: number; absY: number } | null) => void;
   onRotate: () => void;
+  onDragStart?: () => void;
   onDragMove: (pos: { absX: number; absY: number } | null) => void;
   onDragEnd: () => void;
 }) {
@@ -88,6 +90,7 @@ export function PieceTray({
           restoreKey={restoreKey}
           onDrop={onDrop}
           onTap={onRotate}
+          onDragStart={onDragStart}
           onDragMove={onDragMove}
           onDragEnd={onDragEnd}
         />
