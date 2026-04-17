@@ -114,21 +114,48 @@ function variationFor(size: 1 | 2 | 3 | 4 | 5, index: number, count: number): HS
   };
 }
 
+/**
+ * Pre-computed bevel face colors for a piece. The imperative Skia drawers
+ * consume this struct directly (no HSL conversion in worklets). Face shifts
+ * match the penta algorithm: top +15, left +6, right −15, bottom −30.
+ */
+export type BevelColors = {
+  base: string;
+  top: string;
+  left: string;
+  right: string;
+  bottom: string;
+};
+
 const COLOR_BY_ID = new Map<string, string>();
 const HIGHLIGHT_BY_ID = new Map<string, string>();
+const BEVEL_COLORS_BY_ID = new Map<string, BevelColors>();
+
+function computeBevelColors(base: string): BevelColors {
+  return {
+    base,
+    top: shiftLightness(base, 15),
+    left: shiftLightness(base, 6),
+    right: shiftLightness(base, -15),
+    bottom: shiftLightness(base, -30),
+  };
+}
 
 for (const size of [1, 2, 3, 4, 5] as const) {
   const pieces = piecesBySize(size);
   pieces.forEach((p, i) => {
     const hsl = variationFor(size, i, pieces.length);
-    COLOR_BY_ID.set(p.id, hslToHex(hsl.h, hsl.s, hsl.l));
+    const base = hslToHex(hsl.h, hsl.s, hsl.l);
+    COLOR_BY_ID.set(p.id, base);
     // Ghost highlight: +10% lightness, same hue/sat — reads as a lifted preview.
     HIGHLIGHT_BY_ID.set(p.id, hslToHex(hsl.h, hsl.s, Math.min(88, hsl.l + 10)));
+    BEVEL_COLORS_BY_ID.set(p.id, computeBevelColors(base));
   });
 }
 
 /** Fallback color if an unknown piece id slips through — matches legacy teal. */
 export const DEFAULT_BLOCK_COLOR = '#2E7D6B';
+const DEFAULT_BEVEL = computeBevelColors(DEFAULT_BLOCK_COLOR);
 
 export function colorForPieceId(pieceId: string): string {
   return COLOR_BY_ID.get(pieceId) ?? DEFAULT_BLOCK_COLOR;
@@ -136,4 +163,13 @@ export function colorForPieceId(pieceId: string): string {
 
 export function highlightColorForPieceId(pieceId: string): string {
   return HIGHLIGHT_BY_ID.get(pieceId) ?? DEFAULT_BLOCK_COLOR;
+}
+
+/**
+ * Pre-computed 5-face bevel color palette for a piece. Cached at module load
+ * so the imperative Skia drawers can consume it without running HSL math
+ * inside worklets.
+ */
+export function bevelColorsForPieceId(pieceId: string): BevelColors {
+  return BEVEL_COLORS_BY_ID.get(pieceId) ?? DEFAULT_BEVEL;
 }

@@ -153,11 +153,8 @@ ghost 블록은 동일 페인팅에 opacity 0.5 + bevel 비율 0.20.
 ## 4. 우선순위 제안 (ROI 순)
 
 ### Tier 1 — 시각 정체성 변화가 큰 것
-1. **3D 베벨 블록 셀** — 플랫 → 입체. `Cell.tsx` 교체 수준. 구현 옵션:
-   - (a) `react-native-skia` 도입 후 CustomPaint 포팅 (품질 최상).
-   - (b) `<View>` 4겹 + HSL 보정으로 의사 베벨 (Skia 없이 가능, 품질 80%).
-   - **선결**: Skia 도입 가부 결정 필요.
-2. **라인 클리어 scale+fade + 파티클** — 손맛 직결. Skia 없이는 Reanimated `withSequence`로 절충 가능.
+1. **3D 베벨 블록 셀** — ✅ 완료 (1차 SVG 기반 → 후속 `@shopify/react-native-skia`로 전환, `docs/adr/001-skia-for-blockmatch.md`).
+2. **라인 클리어 scale+fade + 파티클** — Skia 도입 후 자연스럽게 추가 가능. 한 Canvas 안에 파티클 그리면 native view 추가 0.
 3. **피스 스폰 scale-in 추가** — 한 줄 변경 수준 (`DraggablePiece.tsx`). spring scale 추가.
 
 ### Tier 2 — 폴리시
@@ -180,11 +177,11 @@ ghost 블록은 동일 페인팅에 opacity 0.5 + bevel 비율 0.20.
 ### 기술 제약
 - `constants/theme.ts` 토큰 사용 강제 — 새 컬러는 토큰화 필요.
 - Reanimated 4 + Gesture Handler 2.30 — 워클릿 안에서 `runOnJS`.
-- React Native에는 Flutter `CustomPainter` 직접 대응이 없음 → **`react-native-skia`** 가 가장 가까움 (현재 미도입).
+- 렌더 엔진은 **`@shopify/react-native-skia`** (Flutter `CustomPainter` 등가물). 도입 결정은 ADR-001.
 - `--no-verify` 금지, atomic commit, `/커밋` 슬래시 커맨드 사용.
 
 ### 사전 결정 필요
-1. **`react-native-skia` 도입 여부** — Tier 1의 베벨/파티클 품질을 결정.
+1. ~~**`react-native-skia` 도입 여부**~~ — 결정됨. ADR-001 참고.
 2. **다크 톤 채택 여부** — 레퍼런스는 웜 오렌지 게임 톤. 현재 angelica-expo는 라이트 미니멀. 게임 영역만 다른 톤을 쓸지, 일관성 유지할지.
 3. **사운드/햅틱 정책** — 앱 전체 정책과 정합.
 4. **Fugaz One 같은 게임용 헤드라인 폰트 추가 여부** — 현재 GowunBatang/AstaSans 2종 체제 유지가 원칙이면 보류.

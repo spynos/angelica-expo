@@ -230,7 +230,9 @@ turnScore = (lineScore + obstacleBonus) * comboMultiplier
 - 드래그 중 두 번째 손가락 탭 회전은 추후 검토 (MVP 제외).
 
 ### 5.5 시각 디자인 토큰
-- 플레이어 블록: 사이즈별(1~5칸) HSL 팔레트 — `src/lib/blockmatch/colors.ts` 의 `BASE` 정의 + per-shape variation. 각 셀은 `BeveledBlock` (penta_block_blast 의 `beveled_block.dart` 채용) 으로 4면 베벨 + top-left 하이라이트 페인팅. 면별 lightness 보정: top +15 / left +6 / right −15 / bottom −30.
+- 플레이어 블록: 사이즈별(1~5칸) HSL 팔레트 — `src/lib/blockmatch/colors.ts` 의 `BASE` 정의 + per-shape variation. 각 셀은 4면 베벨(top +15 / left +6 / right −15 / bottom −30) + top-left 하이라이트 페인팅 (penta_block_blast `beveled_block.dart` 채용).
+- 렌더 엔진: **`@shopify/react-native-skia` 명령형 모드**. 게임 플레이 영역 전체를 **단일 `<Canvas>`** 한 개 native view로 그림. `useDerivedValue` worklet이 `Skia.PictureRecorder`로 imperative draw → `<Picture>` 교체로 React 개입 없이 시각 갱신. 도입 배경: `docs/adr/001-skia-for-blockmatch.md` (Skia 도입) + `docs/adr/002-single-canvas-imperative.md` (단일 Canvas + imperative 전환).
+- 깜빡임 케이스(드래그 시작, 배치, 복귀, 미리보기 교체)는 모든 시각 업데이트가 한 worklet pass에서 끝나므로 구조적으로 발생하지 않는다.
 - 보드 배경: `Palette.boardWarm.background` (`#FAF7F2`). 다크모드에서도 항상 웜 라이트 톤 고정.
 - 빈 칸: `Palette.boardWarm.emptyTint` (`#F0E9DA`) — 보드 배경보다 살짝 어두운 tint 로 그리드감 형성.
 - 그리드라인: `Palette.boardWarm.gridLine` (`#E5DCC9`) — 명시적 보더 대신 보드 vs emptyTint 색차로 구현. 추후 hairline 보더 추가 여지.
