@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { HeaderBackButton } from '@/src/components/HeaderBackButton';
 
 export default function PuzzleStack() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   return (
     <Stack

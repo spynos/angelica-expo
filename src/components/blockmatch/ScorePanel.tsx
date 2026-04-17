@@ -12,7 +12,7 @@ export function ScorePanel({
   highScore: number;
   combo: number;
 }) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
   return (
     <View style={styles.row}>
       <Stat label="점수" value={String(score)} palette={palette.text} muted={palette.textMuted} large />

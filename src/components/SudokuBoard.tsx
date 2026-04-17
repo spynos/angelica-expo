@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function SudokuBoard({ puzzle, state, memo, selected, onSelect }: Props) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const conflicts = useMemo(() => findConflicts(state), [state]);
   const selectedValue = selected != null ? state[selected] : 0;

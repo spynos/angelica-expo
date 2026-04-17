@@ -4,7 +4,7 @@ import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function ComingSoonGame({ title, tagline }: { title: string; tagline: string }) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
 
   return (

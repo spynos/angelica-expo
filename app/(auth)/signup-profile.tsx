@@ -9,7 +9,7 @@ import { TextField } from '@/src/components/ui/TextField';
 import { supabase } from '@/src/lib/supabase';
 
 export default function SignupStep2() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const params = useLocalSearchParams<{ email: string; password: string }>();
   const [nickname, setNickname] = useState('');

@@ -6,7 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/src/store/auth';
 
 export function HeaderAvatarButton() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const profile = useAuthStore((s) => s.profile);
   const initial = profile?.nickname?.[0] ?? '시';

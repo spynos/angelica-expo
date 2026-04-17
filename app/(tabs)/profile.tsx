@@ -12,7 +12,7 @@ import { supabase } from '@/src/lib/supabase';
 import { useAuthStore } from '@/src/store/auth';
 
 export default function ProfileScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);

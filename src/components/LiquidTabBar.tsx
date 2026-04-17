@@ -40,7 +40,7 @@ type GlassPillProps = {
 };
 
 function GlassPill({ style, children, interactive }: GlassPillProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   if (liquidGlassSupported) {
     return (
       <GlassView
@@ -189,7 +189,7 @@ function ActionButton({ label, icon, color, onPress }: ActionButtonProps) {
 
 export function LiquidTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
 
   const visibleRoutes = useMemo(

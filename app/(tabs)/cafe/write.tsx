@@ -30,7 +30,7 @@ const BG_COLORS: PoemBgColor[] = ['#FFFFFF', '#FAF7F2', '#F5E6D8', '#EDE8F5'];
 const MAX_BODY = 1000;
 
 export default function WritePoemScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const userId = useAuthStore((s) => s.user?.id ?? null);
 

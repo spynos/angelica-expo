@@ -12,7 +12,7 @@ const FONT_FAMILY_MAP = {
 } as const;
 
 export function PoemCard({ poem }: { poem: PoemWithAuthor }) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
 
   return (

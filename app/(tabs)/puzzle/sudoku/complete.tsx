@@ -6,7 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/src/components/ui/Button';
 
 export default function CompleteScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const { elapsed, errors, difficulty } = useLocalSearchParams<{
     elapsed: string;

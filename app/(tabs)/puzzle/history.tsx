@@ -6,8 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // TODO: list puzzle_records for the current user once the data layer is ready.
 export default function PuzzleHistoryScreen() {
-  const scheme = useColorScheme() ?? 'light';
-  const palette = Colors[scheme];
+  const palette = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>

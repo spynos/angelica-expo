@@ -20,7 +20,7 @@ import { useAuthStore } from '@/src/store/auth';
 import type { PoemWithAuthor } from '@/src/types/db';
 
 export default function CafeFeed() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [poems, setPoems] = useState<PoemWithAuthor[]>([]);

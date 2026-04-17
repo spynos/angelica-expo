@@ -29,7 +29,7 @@ const FONT_FAMILY_MAP = {
 } as const;
 
 export default function PoemDetailScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useAuthStore((s) => s.user?.id ?? null);

@@ -25,7 +25,7 @@ export const Button = forwardRef<View, Props>(function Button(
   { label, variant = 'primary', loading, fullWidth = true, leftSlot, disabled, style, ...rest },
   ref,
 ) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
 
   return (

@@ -18,7 +18,7 @@ export function GameOverSheet({
   onRestart: () => void;
   onClose: () => void;
 }) {
-  const palette = Colors[useColorScheme() ?? 'light'];
+  const palette = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>

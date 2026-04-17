@@ -10,7 +10,7 @@ type Props = TextInputProps & {
 };
 
 export function TextField({ label, error, style, onFocus, onBlur, ...rest }: Props) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const [focused, setFocused] = useState(false);
 

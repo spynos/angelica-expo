@@ -27,7 +27,7 @@ function fmtTime(s: number) {
 }
 
 export default function SudokuGameScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const { difficulty } = useLocalSearchParams<{ difficulty: SudokuDifficulty }>();
   const diff = (difficulty ?? 'easy') as SudokuDifficulty;

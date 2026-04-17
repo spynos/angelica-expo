@@ -11,7 +11,7 @@ import { supabase } from '@/src/lib/supabase';
 import { signInWithApple, signInWithGoogle } from '@/src/lib/social-auth';
 
 export default function LoginScreen() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

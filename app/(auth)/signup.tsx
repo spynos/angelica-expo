@@ -8,7 +8,7 @@ import { Button } from '@/src/components/ui/Button';
 import { TextField } from '@/src/components/ui/TextField';
 
 export default function SignupStep1() {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
