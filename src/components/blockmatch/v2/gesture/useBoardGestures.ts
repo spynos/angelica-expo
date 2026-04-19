@@ -274,6 +274,22 @@ export function useBoardGestures(params: {
       const boardLocalAnchorX = pieceAnchorScreenX - boardOriginX.value;
       const boardLocalAnchorY = pieceAnchorScreenY - boardOriginY.value;
 
+      // Clear snap when the piece anchor leaves the board area.
+      // If already snapped, allow a 1.5-cell buffer before releasing
+      // (consistent with KEEP_THRESHOLD_SQ); if not snapped, release immediately.
+      const keepMarginPx = ghostValidSV.value ? 1.5 * cellSize : 0;
+      if (
+        boardLocalAnchorX < -keepMarginPx ||
+        boardLocalAnchorY < -keepMarginPx ||
+        boardLocalAnchorX > boardCols * cellSize + keepMarginPx ||
+        boardLocalAnchorY > boardRows * cellSize + keepMarginPx
+      ) {
+        ghostOpacitySV.value = 0;
+        ghostAnchorSV.value = { row: -1, col: -1 };
+        ghostValidSV.value = false;
+        return;
+      }
+
       const result = ghostSnap(
         boardLocalAnchorX,
         boardLocalAnchorY,
