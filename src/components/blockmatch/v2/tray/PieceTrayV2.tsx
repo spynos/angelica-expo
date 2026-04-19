@@ -7,10 +7,15 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { Palette, Radius } from '@/constants/theme';
+import { Radius, Shadow } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { GameState } from '@/src/lib/blockmatch/types';
 import { DUR_SPAWN } from '../engine/constants';
 import { PiecePreview } from './PiecePreview';
+
+/** Inner padding between the chip card edge and the piece canvas. Keeps
+ * tall/wide pieces (e.g. 5-cell I) from looking cramped inside the chip. */
+export const TRAY_BOX_PADDING = 10;
 
 /**
  * Current + next×2 preview tray.
@@ -40,6 +45,11 @@ export function PieceTrayV2({
 }) {
   const current = state.current;
   const [next1, next2] = state.next;
+  // Match ScorePanelV2 chip bg so score chips, queue box, and preview box
+  // all read as one chip family.
+  const isDark = (useColorScheme() ?? 'light') === 'dark';
+  const chipBg = isDark ? '#2C2925' : '#FFF8EE';
+  const chipBorder = isDark ? '#3D3A34' : '#E8DFCB';
 
   // Fade-in opacity for the spawned piece. Starts at 1 for the initial
   // piece (no fade on first mount), then animates 0 → 1 per piece advance.
@@ -77,7 +87,9 @@ export function PieceTrayV2({
   return (
     <View style={styles.tray}>
       <View style={styles.currentBox}>
-        <View style={styles.pieceBg} />
+        <View
+          style={[styles.pieceBg, { backgroundColor: chipBg, borderColor: chipBorder }]}
+        />
         <Animated.View style={currentStyle}>
           {/* Key by rngState: React unmounts the old Skia canvas and mounts
               a fresh one when the piece advances. This guarantees no stale
@@ -92,7 +104,9 @@ export function PieceTrayV2({
       </View>
 
       <View style={styles.nextBox}>
-        <View style={styles.pieceBg} />
+        <View
+          style={[styles.pieceBg, { backgroundColor: chipBg, borderColor: chipBorder }]}
+        />
         <PiecePreview
           defId={next1.defId}
           cellSize={nextCellSize}
@@ -113,25 +127,25 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    paddingBottom: 20,
   },
   currentBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    padding: TRAY_BOX_PADDING,
   },
   nextBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 8,
+    padding: TRAY_BOX_PADDING,
   },
   pieceBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Palette.boardWarm.emptyTint,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    ...Shadow.sm,
   },
 });

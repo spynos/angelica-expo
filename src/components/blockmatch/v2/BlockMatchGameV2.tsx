@@ -9,7 +9,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { shapeOf } from '@/src/lib/blockmatch/board';
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
@@ -22,11 +22,10 @@ import { DUR_LINE_CLEAR, DUR_RAINBOW_STAGGER_TOTAL, DUR_ROTATE } from './engine/
 import { HapticService } from './feedback/haptic';
 import { SoundService } from './feedback/sound';
 import { useBoardGestures, type TrayRect } from './gesture/useBoardGestures';
-import { ComboBadgeV2 } from './overlays/ComboBadgeV2';
 import { RainbowStaggerV2 } from './overlays/RainbowStaggerV2';
 import { StageClearBanner } from './overlays/StageClearBanner';
 import { ScorePanelV2 } from './ScorePanelV2';
-import { PieceTrayV2 } from './tray/PieceTrayV2';
+import { PieceTrayV2, TRAY_BOX_PADDING } from './tray/PieceTrayV2';
 
 /**
  * Top-level integration component for the v2 blockmatch game.
@@ -144,13 +143,32 @@ export function BlockMatchGameV2() {
   // still get a usable tray; capped so large screens don't over-scale.
   const trayHeight = Math.min(220, Math.max(160, screen.height * 0.24));
   const TRAY_V_PADDING = 24;
-  // Current piece slot is a 5×5-cell square filling the tray's usable height.
-  const trayCellSize = Math.floor((trayHeight - TRAY_V_PADDING) / 5);
-  // Next pieces stack 2 in the same usable height, so each is ~half as tall.
-  const NEXT_GAP_PX = 6;
-  const trayNextCellSize = Math.floor(
-    ((trayHeight - TRAY_V_PADDING - NEXT_GAP_PX) / 2) / 5,
+  const NEXT_INNER_GAP_PX = 8; // matches PieceTrayV2 nextBox gap
+  // Each chip card has TRAY_BOX_PADDING of internal padding on all sides, so
+  // the piece canvas must shrink to leave room for that padding inside both
+  // the tray-height budget and the board-width budget.
+  const BOX_PAD_H = 2 * TRAY_BOX_PADDING;
+  // Height-first cell sizing: current slot is a 5×5 square filling the tray
+  // height minus the box's own vertical padding; each next slot is ~half as tall.
+  const trayCellByHeight = Math.floor(
+    (trayHeight - TRAY_V_PADDING - BOX_PAD_H) / 5,
   );
+  const trayNextCellByHeight = Math.floor(
+    (trayHeight - TRAY_V_PADDING - BOX_PAD_H) / 2 / 5,
+  );
+  // Width cap: current (5 cells + box padding) + next-pair (10 cells + inner
+  // gap + box padding) must fit inside the board width so the tray's outer
+  // edges line up with the board.
+  const boardW = BOARD_SIZE * cellSize;
+  const naturalTrayWidth =
+    5 * trayCellByHeight +
+    10 * trayNextCellByHeight +
+    NEXT_INNER_GAP_PX +
+    2 * BOX_PAD_H;
+  const trayScale =
+    naturalTrayWidth > boardW ? boardW / naturalTrayWidth : 1;
+  const trayCellSize = Math.floor(trayCellByHeight * trayScale);
+  const trayNextCellSize = Math.floor(trayNextCellByHeight * trayScale);
 
   // --- Current-piece rotation animation ---------------------------------
   // `turns` is shared with PieceTrayV2 (for the preview slot) and
@@ -248,7 +266,6 @@ export function BlockMatchGameV2() {
     }
   }, [lastTurn, ghost]);
 
-  const boardW = BOARD_SIZE * cellSize;
   const boardH = BOARD_SIZE * cellSize;
 
   return (
@@ -294,7 +311,7 @@ export function BlockMatchGameV2() {
           <View
             ref={trayRef}
             onLayout={onTrayLayout}
-            style={[styles.trayWrap, { height: trayHeight }]}
+            style={[styles.trayWrap, { width: boardW, height: trayHeight }]}
             collapsable={false}
           >
             <PieceTrayV2
@@ -309,7 +326,6 @@ export function BlockMatchGameV2() {
       </GestureDetector>
 
       <DragPieceOverlay entity={drag} cellSize={cellSize} turns={turns} />
-      <ComboBadgeV2 combo={state.combo} />
     </SafeAreaView>
   );
 }
@@ -319,13 +335,15 @@ const styles = StyleSheet.create({
   playArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    // Uniform vertical rhythm: score↔board gap comes from the score panel's
+    // own paddingBottom (Spacing.md); board↔tray gap matches it via `gap`.
+    gap: Spacing.md,
   },
   boardWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   trayWrap: {
-    width: '100%',
+    alignSelf: 'center',
   },
 });

@@ -66,7 +66,7 @@ export function PiecePreview({
   }, [shape0, containerCells]);
 
   const centerPx = containerPx / 2;
-  const half = (cellSize - 2) / 2;
+  const half = cellSize / 2;
 
   const isStatic = turns === undefined;
   const staticT = staticTurns ?? 0;
@@ -120,13 +120,13 @@ export function PiecePreview({
           <Group
             key={i}
             transform={[
-              { translateX: (offsetX + c) * cellSize + 1 },
-              { translateY: (offsetY + r) * cellSize + 1 },
+              { translateX: (offsetX + c) * cellSize },
+              { translateY: (offsetY + r) * cellSize },
             ]}
           >
             <Group transform={counterTransform}>
               <BeveledBlockShape
-                size={cellSize - 2}
+                size={cellSize}
                 colors={colors}
                 bevelFraction={DEFAULT_BEVEL_FRACTION}
               />
