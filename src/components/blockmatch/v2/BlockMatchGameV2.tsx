@@ -227,7 +227,7 @@ export function BlockMatchGameV2() {
   const inputEnabled = transition === 'idle' && !state.isOver;
 
   // --- Gestures & entities -------------------------------------------
-  const { gesture, ghost, drag, isDragging } = useBoardGestures({
+  const { gesture, ghost, drag, isDragging, boardBits } = useBoardGestures({
     state,
     cellSize,
     boardCols: BOARD_SIZE,
@@ -271,7 +271,13 @@ export function BlockMatchGameV2() {
             style={[styles.boardWrap, { width: boardW, height: boardH }]}
             collapsable={false}
           >
-            <BoardCanvasV2 state={state} cellSize={cellSize} ghost={ghost} onManager={handleOnManager} />
+            <BoardCanvasV2
+              state={state}
+              cellSize={cellSize}
+              ghost={ghost}
+              boardBits={boardBits}
+              onManager={handleOnManager}
+            />
             <RainbowStaggerV2
               active={rainbowActive}
               boardWidth={boardW}

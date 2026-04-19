@@ -1,6 +1,7 @@
 import { Canvas } from '@shopify/react-native-skia';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 import type { GameState } from '@/src/lib/blockmatch/types';
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
@@ -8,6 +9,7 @@ import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
 import type { EntityManager } from '../engine/entityManager';
 import type { GhostEntity } from '../engine/types';
 import { useEntities } from '../engine/useEntities';
+import { ClearHintNode } from './ClearHintNode';
 import { BoardBackground } from './drawers';
 import { EntityNode } from './EntityNode';
 import { GhostNode } from './GhostNode';
@@ -29,11 +31,14 @@ export function BoardCanvasV2({
   state,
   cellSize,
   ghost,
+  boardBits,
   onManager,
 }: {
   state: GameState;
   cellSize: number;
   ghost?: GhostEntity;
+  /** Worklet-shareable board occupancy used by the line-clear hint. */
+  boardBits?: SharedValue<number[]>;
   onManager?: (manager: EntityManager) => void;
 }) {
   const { entities, manager } = useEntities(state);
@@ -58,6 +63,15 @@ export function BoardCanvasV2({
         {entities.map((e) => (
           <EntityNode key={e.id} entity={e} cellSize={cellSize} />
         ))}
+        {ghost && boardBits ? (
+          <ClearHintNode
+            ghost={ghost}
+            boardBits={boardBits}
+            cellSize={cellSize}
+            boardCols={BOARD_SIZE}
+            boardRows={BOARD_SIZE}
+          />
+        ) : null}
         {ghost ? <GhostNode key={ghost.id} entity={ghost} cellSize={cellSize} /> : null}
       </Canvas>
     </View>

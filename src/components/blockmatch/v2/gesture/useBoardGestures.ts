@@ -369,5 +369,8 @@ export function useBoardGestures(params: {
     /** True while a piece is in the player's hand. Consumers (tray) can
      * hide the source slot while the piece is being dragged. */
     isDragging,
+    /** Worklet-shareable board occupancy. Exposed so the board canvas can
+     * render the line-clear hint without rebuilding the snapshot. */
+    boardBits,
   };
 }
