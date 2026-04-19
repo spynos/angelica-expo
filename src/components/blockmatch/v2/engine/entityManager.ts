@@ -1,20 +1,17 @@
-import { withTiming } from 'react-native-reanimated';
+import { Easing, withTiming } from 'react-native-reanimated';
 
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
 import type { Cell, GameState, Offset } from '@/src/lib/blockmatch/types';
 
-import { DUR_LINE_CLEAR, DUR_SPAWN, STAGGER_LINE_CLEAR_MS } from './constants';
 import {
-  createBlockEntity,
-  createObstacleEntity,
-} from './entityFactory';
+  DUR_LINE_CLEAR,
+  DUR_SPAWN,
+  JITTER_LINE_CLEAR_MS,
+  STAGGER_LINE_CLEAR_MS,
+} from './constants';
+import { createBlockEntity, createObstacleEntity } from './entityFactory';
 import { PHASE } from './phases';
-import type {
-  BlockEntity,
-  Entity,
-  EntityId,
-  ObstacleEntity,
-} from './types';
+import type { BlockEntity, Entity, EntityId, ObstacleEntity } from './types';
 
 /**
  * EntityManager: single source of truth for on-screen entities.
@@ -179,11 +176,26 @@ export class EntityManager {
     this.lastBoard = board;
   }
 
-  /** Force re-emit (e.g., after manual phase advances). */
+  /**
+   * Force re-emit (e.g., after manual phase advances).
+   *
+   * Coalesced via rAF: a mass line-clear produces dozens of spawn/despawn
+   * events across ~300ms. Without batching, each would fire its listeners
+   * synchronously, causing React to schedule one re-render per event — which
+   * shows up as dropped frames on the drag gesture if the player is already
+   * moving the next piece. rAF collapses all invalidates in a frame into one
+   * listener broadcast.
+   */
   invalidate(): void {
     this.snapshotDirty = true;
-    for (const l of this.listeners) l();
+    if (this._invalidateScheduled) return;
+    this._invalidateScheduled = true;
+    requestAnimationFrame(() => {
+      this._invalidateScheduled = false;
+      for (const l of this.listeners) l();
+    });
   }
+  private _invalidateScheduled = false;
 
   // --- Internal --------------------------------------------------------
 
@@ -258,16 +270,33 @@ export class EntityManager {
     const entity = this.blockByCell.get(i);
     if (!entity) return;
     entity.phase.value = PHASE.CLEARING;
+    // Small per-cell jitter keeps the wave from looking mechanical without
+    // breaking the top-to-bottom row sweep.
+    const jitter = Math.random() * JITTER_LINE_CLEAR_MS;
+    const totalDelay = delay + jitter;
+
     setTimeout(() => {
-      entity.transform.opacity.value = withTiming(0, { duration: DUR_LINE_CLEAR });
-      entity.transform.scale.value = withTiming(0.5, { duration: DUR_LINE_CLEAR });
-    }, delay);
+      entity.transform.scale.value = withTiming(0.6, {
+        duration: DUR_LINE_CLEAR,
+        easing: Easing.out(Easing.cubic),
+      });
+      entity.transform.opacity.value = withTiming(0, {
+        duration: DUR_LINE_CLEAR,
+        easing: Easing.out(Easing.quad),
+      });
+    }, totalDelay);
+
     setTimeout(() => {
       this.entities.delete(entity.id);
-      this.blockByCell.delete(i);
+      // Identity check: if a new block was placed on this cell while we were
+      // fading, blockByCell now points at THAT entity — don't clobber its
+      // reference or the next clearBlock will silently no-op on it.
+      if (this.blockByCell.get(i) === entity) {
+        this.blockByCell.delete(i);
+      }
       entity.phase.value = PHASE.DESPAWNED;
       this.invalidate();
-    }, delay + DUR_LINE_CLEAR);
+    }, totalDelay + DUR_LINE_CLEAR);
   }
 
   private spawnObstacle(
@@ -296,15 +325,27 @@ export class EntityManager {
     const entity = this.obstacleByCell.get(i);
     if (!entity) return;
     entity.phase.value = PHASE.CLEARING;
+    const jitter = Math.random() * JITTER_LINE_CLEAR_MS;
+    const totalDelay = delay + jitter;
+
     setTimeout(() => {
-      entity.transform.opacity.value = withTiming(0, { duration: DUR_LINE_CLEAR });
-      entity.transform.scale.value = withTiming(0.4, { duration: DUR_LINE_CLEAR });
-    }, delay);
+      entity.transform.scale.value = withTiming(0.5, {
+        duration: DUR_LINE_CLEAR,
+        easing: Easing.out(Easing.cubic),
+      });
+      entity.transform.opacity.value = withTiming(0, {
+        duration: DUR_LINE_CLEAR,
+        easing: Easing.out(Easing.quad),
+      });
+    }, totalDelay);
+
     setTimeout(() => {
       this.entities.delete(entity.id);
-      this.obstacleByCell.delete(i);
+      if (this.obstacleByCell.get(i) === entity) {
+        this.obstacleByCell.delete(i);
+      }
       entity.phase.value = PHASE.DESPAWNED;
       this.invalidate();
-    }, delay + DUR_LINE_CLEAR);
+    }, totalDelay + DUR_LINE_CLEAR);
   }
 }

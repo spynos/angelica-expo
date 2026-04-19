@@ -12,18 +12,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { shapeOf } from '@/src/lib/blockmatch/board';
-import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
+import { BOARD_SIZE, type PieceShape } from '@/src/lib/blockmatch/types';
 import { useBlockMatch } from '@/src/store/blockmatch';
 
 import { BoardCanvasV2 } from './canvas/BoardCanvasV2';
 import type { EntityManager } from './engine/entityManager';
 import { DragPieceOverlay } from './canvas/DragPieceOverlay';
-import { DUR_LINE_CLEAR, DUR_RAINBOW_STAGGER_TOTAL, DUR_ROTATE } from './engine/constants';
+import { DUR_CURTAIN_CLOSE, DUR_CURTAIN_HOLD, DUR_CURTAIN_OPEN, DUR_LINE_CLEAR, DUR_LINE_CLEAR_POPUP, DUR_ROTATE } from './engine/constants';
 import { HapticService } from './feedback/haptic';
 import { SoundService } from './feedback/sound';
 import { useBoardGestures, type TrayRect } from './gesture/useBoardGestures';
-import { RainbowStaggerV2 } from './overlays/RainbowStaggerV2';
-import { StageClearBanner } from './overlays/StageClearBanner';
+import { LineClearPopup } from './overlays/LineClearPopup';
+import { StageCurtain } from './overlays/StageCurtain';
 import { ScorePanelV2 } from './ScorePanelV2';
 import { PieceTrayV2, TRAY_BOX_PADDING } from './tray/PieceTrayV2';
 
@@ -45,9 +45,9 @@ import { PieceTrayV2, TRAY_BOX_PADDING } from './tray/PieceTrayV2';
  *   - ComboBadge + RainbowStagger overlays
  */
 
-const CLEAR_PHASE_MS = DUR_RAINBOW_STAGGER_TOTAL; // 1200ms — matches rainbow total
-const BANNER_PHASE_MS = 900;
-const SPAWN_PHASE_MS = 800;
+const CLEAR_PHASE_MS = DUR_CURTAIN_CLOSE;  // panels slide to center
+const BANNER_PHASE_MS = DUR_CURTAIN_HOLD;  // text hold, commitStage fires here
+const SPAWN_PHASE_MS = DUR_CURTAIN_OPEN;   // panels slide back out
 
 type ScreenTransition = 'idle' | 'clearing' | 'banner' | 'spawning';
 
@@ -67,28 +67,33 @@ export function BlockMatchGameV2() {
   // --- Stage transition (clearing → banner → spawning → idle) ---------
   const [transition, setTransition] = useState<ScreenTransition>('idle');
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [rainbowActive, setRainbowActive] = useState(false);
   const [bannerStage, setBannerStage] = useState(1);
 
   useEffect(() => {
     if (!lastTurn?.stageCleared) return;
     setBannerStage(state.stage); // capture before commitStage increments it
-    setTransition('clearing');
-    setRainbowActive(true);
-    const t1 = setTimeout(() => {
-      setRainbowActive(false);
-      setTransition('banner');
-      const t2 = setTimeout(() => {
-        dispatch({ type: 'commitStage' });
-        setTransition('spawning');
-        const t3 = setTimeout(() => {
-          setTransition('idle');
-        }, SPAWN_PHASE_MS);
-        timersRef.current.push(t3);
-      }, BANNER_PHASE_MS);
-      timersRef.current.push(t2);
-    }, CLEAR_PHASE_MS);
-    timersRef.current.push(t1);
+
+    // When lines were cleared this turn, wait for the LineClearPopup animation
+    // to finish before starting the curtain so the transition feels unhurried.
+    const preDelay = lastTurn.linesCleared > 0 ? DUR_LINE_CLEAR_POPUP : 0;
+
+    const t0 = setTimeout(() => {
+      setTransition('clearing');
+      const t1 = setTimeout(() => {
+        setTransition('banner');
+        const t2 = setTimeout(() => {
+          dispatch({ type: 'commitStage' });
+          setTransition('spawning');
+          const t3 = setTimeout(() => {
+            setTransition('idle');
+          }, SPAWN_PHASE_MS);
+          timersRef.current.push(t3);
+        }, BANNER_PHASE_MS);
+        timersRef.current.push(t2);
+      }, CLEAR_PHASE_MS);
+      timersRef.current.push(t1);
+    }, preDelay);
+    timersRef.current.push(t0);
   }, [lastTurn, dispatch, state.stage]);
 
   useEffect(() => {
@@ -221,6 +226,8 @@ export function BlockMatchGameV2() {
 
   // --- Dispatch wrappers ---------------------------------------------
   const managerRef = useRef<EntityManager | null>(null);
+  const lastPlacedCentroidColRef = useRef<number | null>(null);
+
   const handleOnManager = useCallback((m: EntityManager) => {
     managerRef.current = m;
   }, []);
@@ -228,9 +235,11 @@ export function BlockMatchGameV2() {
   const handlePlace = useCallback(
     (row: number, col: number) => {
       if (transition !== 'idle') return;
-      // Optimistically spawn board blocks immediately so they appear at the
-      // same frame the drag piece disappears, eliminating the blink gap.
-      managerRef.current?.optimisticPlace(row, col, state.current.defId, shapeOf(state.current));
+      const shape: PieceShape = shapeOf(state.current);
+      // Compute piece centroid column for popup positioning
+      const centroidDc = shape.reduce((sum, [, dc]) => sum + dc, 0) / shape.length;
+      lastPlacedCentroidColRef.current = col + centroidDc;
+      managerRef.current?.optimisticPlace(row, col, state.current.defId, shape);
       dispatch({ type: 'place', row, col });
     },
     [dispatch, state.current, transition],
@@ -295,14 +304,17 @@ export function BlockMatchGameV2() {
               boardBits={boardBits}
               onManager={handleOnManager}
             />
-            <RainbowStaggerV2
-              active={rainbowActive}
+            <StageCurtain
+              phase={transition}
+              clearedStage={bannerStage}
               boardWidth={boardW}
               boardHeight={boardH}
             />
-            <StageClearBanner
-              active={transition === 'banner'}
-              stage={bannerStage}
+            <LineClearPopup
+              lastTurn={lastTurn}
+              combo={state.combo}
+              placedCentroidCol={lastPlacedCentroidColRef.current}
+              cellSize={cellSize}
               boardWidth={boardW}
               boardHeight={boardH}
             />

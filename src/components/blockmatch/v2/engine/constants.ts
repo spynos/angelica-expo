@@ -67,14 +67,30 @@ export const INVALID_TARGET_COLOR = '#8080804C';
 // ---------------------------------------------------------------------------
 
 export const DUR_ROTATE = 200;
-export const DUR_LINE_CLEAR = 300;
-/** Stagger delay per row during line clear, in ms. */
-export const STAGGER_LINE_CLEAR_MS = 50;
+/**
+ * Per-cell fade-out duration during line clear. Ghost fade also uses this
+ * (BlockMatchGameV2) so they despawn in sync.
+ */
+export const DUR_LINE_CLEAR = 280;
+/** Stagger delay per row during line clear — produces a top-to-bottom wave. */
+export const STAGGER_LINE_CLEAR_MS = 45;
+/** Small per-cell random jitter on top of row stagger, in ms. */
+export const JITTER_LINE_CLEAR_MS = 15;
 export const DUR_COMBO_POP = 800;
-export const DUR_RAINBOW_STAGGER_TOTAL = 1200;
-export const DUR_RAINBOW_ROW = 480;
-export const STAGGER_RAINBOW_ROW = 66.7; // ms between row starts
 export const DUR_SPAWN = 200;
+/** Total duration of the LineClearPopup animation (punch-in + settle + hold + fade-out). */
+export const DUR_LINE_CLEAR_POPUP = 1200;
+
+// ---------------------------------------------------------------------------
+// Stage curtain transition
+// ---------------------------------------------------------------------------
+
+/** Both panels slide to center (closing). */
+export const DUR_CURTAIN_CLOSE = 600;
+/** Text hold before curtain opens. */
+export const DUR_CURTAIN_HOLD = 600;
+/** Both panels slide back out (opening). */
+export const DUR_CURTAIN_OPEN = 600;
 
 // ---------------------------------------------------------------------------
 // Audio throttle
