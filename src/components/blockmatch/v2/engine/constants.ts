@@ -47,14 +47,14 @@ export const GHOST_BEVEL_FRACTION = 0.2;
 // Board surface
 // ---------------------------------------------------------------------------
 
-/** Burnt-orange board background, matches penta AppPalette.boardBackground. */
-export const BOARD_BG_COLOR = '#C04909';
+/** Warm espresso board (30% lighter). */
+export const BOARD_BG_COLOR = '#69635F';
 
-/** Cream grid line color, matches penta AppPalette.boardGridLine. */
-export const BOARD_GRID_COLOR = '#FFF6DF';
+/** Light grey grid line. */
+export const BOARD_GRID_COLOR = '#B0A8A0';
 
-/** Tint applied to empty cells to hint the well; very subtle. */
-export const EMPTY_CELL_TINT = '#B04208';
+/** Slightly lighter empty cell tint. */
+export const EMPTY_CELL_TINT = '#6F6763';
 
 /** Valid drop target highlight (lime) at 30% alpha. */
 export const VALID_TARGET_COLOR = '#E1FF004C';

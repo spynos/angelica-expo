@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Group } from '@shopify/react-native-skia';
+import type { SharedValue } from 'react-native-reanimated';
 import { useDerivedValue } from 'react-native-reanimated';
 
 import { bevelColorsForPieceId } from '@/src/lib/blockmatch/colors';
@@ -23,14 +24,22 @@ import { BeveledBlockShape, ObstacleShape } from './drawers';
 type Props = {
   entity: Entity;
   cellSize: number;
+  /** 0.4–1.0 sinusoid for blinking obstacle icons; shared across all tiles. */
+  obstaclePulse?: SharedValue<number>;
 };
 
-export function EntityNode({ entity, cellSize }: Props) {
+export function EntityNode({ entity, cellSize, obstaclePulse }: Props) {
   if (entity.kind === 'block') {
     return <BlockEntityNode entity={entity} cellSize={cellSize} />;
   }
   if (entity.kind === 'obstacle') {
-    return <ObstacleEntityNode entity={entity} cellSize={cellSize} />;
+    return (
+      <ObstacleEntityNode
+        entity={entity}
+        cellSize={cellSize}
+        pulseOpacity={obstaclePulse}
+      />
+    );
   }
   // dragPiece / ghost / fx are drawn by dedicated overlays in their own tasks.
   return null;
@@ -77,9 +86,11 @@ function BlockEntityNode({
 function ObstacleEntityNode({
   entity,
   cellSize,
+  pulseOpacity,
 }: {
   entity: ObstacleEntity;
   cellSize: number;
+  pulseOpacity?: SharedValue<number>;
 }) {
   // HP drives the shape variant (durable2 armor→cracked), which isn't a
   // SharedValue-friendly thing to swap between. Mirror it into React state
@@ -112,6 +123,7 @@ function ObstacleEntityNode({
         size={cellSize}
         obstacleId={entity.obstacleId}
         hp={hp}
+        pulseOpacity={pulseOpacity}
       />
     </Group>
   );

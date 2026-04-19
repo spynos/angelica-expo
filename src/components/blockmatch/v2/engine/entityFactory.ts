@@ -157,7 +157,7 @@ export function createGhostEntity(params: {
 }
 
 // ---------------------------------------------------------------------------
-// FX (one-shot visual)
+// FX (one-shot visual, generic)
 // ---------------------------------------------------------------------------
 
 export function createFxEntity(params: {

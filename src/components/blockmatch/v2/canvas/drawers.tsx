@@ -5,8 +5,10 @@ import {
   LinearGradient,
   Path,
   Rect,
+  RoundedRect,
   vec,
 } from '@shopify/react-native-skia';
+import type { SharedValue } from 'react-native-reanimated';
 
 import type { BevelColors } from '@/src/lib/blockmatch/colors';
 import type { ObstacleId } from '@/src/lib/blockmatch/types';
@@ -14,7 +16,6 @@ import type { ObstacleId } from '@/src/lib/blockmatch/types';
 import {
   BOARD_BG_COLOR,
   BOARD_GRID_COLOR,
-  DEFAULT_BEVEL_FRACTION,
   EMPTY_CELL_TINT,
 } from '../engine/constants';
 
@@ -83,103 +84,238 @@ export function BeveledBlockShape({
 
 // ---------------------------------------------------------------------------
 // Obstacle shapes (5 kinds).
-// angelica-specific palette: obstacles are a greyscale family separate from
-// the coloured player blocks. See Part A.3 of the planning discussion.
+//
+// Faithful port of penta_block_blast's SpecialBlock (see the Flutter source
+// at lib/game/components/special_block.dart). Every constant, path, and
+// shading alpha below is copied 1:1 from the reference implementation so the
+// obstacles here match the penta reference game exactly.
+//
+// Key design points:
+//   1. Obstacles share the 4-face extruded frustum geometry of player blocks,
+//      which is why they read as cohesive with the board's bevel language.
+//   2. What sets them apart is the bevel INSET — directional/armor/cracked
+//      use a shallow 9% rim, while `generic/basic` uses a steep 44% inset
+//      that produces a tiny-apex pyramid. The sharp silhouette difference is
+//      what makes obstacles pop against player pieces.
+//   3. Shading is semi-transparent offWhite/black overlays (α 0.57/0.37/
+//      0.10/0.22) on top of a grey base — softer "metallic" read than the
+//      hue-preserving HSL shifts used on coloured player blocks.
+//   4. Directional icons and the generic red dot pulse on a 1000ms
+//      easeInOutSine 0↔1 sinusoid driven at the canvas level. Armor bolts
+//      and cracks stay solid.
 // ---------------------------------------------------------------------------
 
+// Penta's bevel inset fractions. `_specialCenterInset = 4` and
+// `_centerInset = 19` from SpecialBlockGeometry, both divided by the
+// baseSize of 43.
+const PENTA_INSET_DIRECTIONAL = 4 / 43;
+const PENTA_INSET_GENERIC = 19 / 43;
+
+// Bevel overlay colors — alpha hex suffixes computed from penta's paint
+// opacities: 0.57→0x91, 0.37→0x5E, 0.10→0x1A, 0.22→0x38. offWhite is
+// AppPalette.offWhite = #FFF6DF.
+const OBS_BEVEL_TOP = '#FFF6DF91';
+const OBS_BEVEL_LEFT = '#FFF6DF5E';
+const OBS_BEVEL_RIGHT = '#0000001A';
+const OBS_BEVEL_BOTTOM = '#00000038';
+
+// Base body colors (penta special_block.dart line 264-266).
+const OBS_BODY_STANDARD = '#C5C5C5';
+const OBS_BODY_CRACKED = '#808080';
+
+// Armor plate (penta: armor uses #A0A0A0 fill, #606060 stroke, #404040 bolts).
+const OBS_ARMOR_FILL = '#A0A0A0';
+const OBS_ARMOR_STROKE = '#606060';
 const OBS_BOLT = '#404040';
+
+// Crack / icon / dot colors (penta: #202020 cracks, #E1FF00 arrows, #FF0000 dot).
 const OBS_CRACK = '#202020';
 const OBS_ACCENT = '#E1FF00';
 const OBS_GENERIC_DOT = '#FF0000';
 
-// Bevel color sets for each obstacle state (grey palette, face shifts ±15/6/30).
-const OBS_BEVEL_BASIC: BevelColors = {
-  base: '#C5C5C5',
-  top: '#EBEBEB',
-  left: '#D4D4D4',
-  right: '#9F9F9F',
-  bottom: '#797979',
-};
-const OBS_BEVEL_FRESH: BevelColors = {
-  base: '#A0A0A0',
-  top: '#C6C6C6',
-  left: '#B0B0B0',
-  right: '#7A7A7A',
-  bottom: '#535353',
-};
-const OBS_BEVEL_CRACKED: BevelColors = {
-  base: '#808080',
-  top: '#A6A6A6',
-  left: '#8F8F8F',
-  right: '#5A5A5A',
-  bottom: '#333333',
-};
+// Penta authors all icon geometry against a 43×43 baseSize; these helpers
+// scale those literal coords into whatever cell size we're drawing at.
+function pentaPath(size: number, points: readonly (readonly [number, number])[]): string {
+  const s = size / 43;
+  return (
+    points
+      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x * s} ${y * s}`)
+      .join(' ') + ' Z'
+  );
+}
 
-function ArrowsHoriz({ size }: { size: number }) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const arm = size * 0.18;
-  const bar = size * 0.08;
-  const offset = size * 0.22;
-  // Two opposing arrows + center bar. Single filled path each to keep
-  // element count low; penta renders these as blinking yellow icons.
-  const left = `M${cx - offset} ${cy} L${cx - offset + arm} ${cy - arm} L${cx - offset + arm} ${cy - bar} L${cx} ${cy - bar} L${cx} ${cy + bar} L${cx - offset + arm} ${cy + bar} L${cx - offset + arm} ${cy + arm} Z`;
-  const right = `M${cx + offset} ${cy} L${cx + offset - arm} ${cy - arm} L${cx + offset - arm} ${cy - bar} L${cx} ${cy - bar} L${cx} ${cy + bar} L${cx + offset - arm} ${cy + bar} L${cx + offset - arm} ${cy + arm} Z`;
+// Path coordinates lifted verbatim from penta's SpecialBlockGeometry.
+// (baseSize 43, so e.g. 21.505 ≈ center.)
+const V_TOP_ARROW = [
+  [21.505, 6.505],
+  [15.7315, 16.505],
+  [27.2785, 16.505],
+] as const;
+const V_BOT_ARROW = [
+  [21.505, 37.505],
+  [27.2785, 27.505],
+  [15.7315, 27.505],
+] as const;
+const V_BAR = [
+  [20.505, 15.505],
+  [22.505, 15.505],
+  [22.505, 28.505],
+  [20.505, 28.505],
+] as const;
+const H_LEFT_ARROW = [
+  [6, 22],
+  [16, 27.7735],
+  [16, 16.2265],
+] as const;
+const H_RIGHT_ARROW = [
+  [37, 22],
+  [27, 16.2265],
+  [27, 27.7735],
+] as const;
+const H_BAR = [
+  [15, 21],
+  [28, 21],
+  [28, 23],
+  [15, 23],
+] as const;
+
+/**
+ * Extruded frustum body — the common substrate for every obstacle type.
+ *
+ * Steps per penta's _SpecialBlockPainter.paint():
+ *   1. Fill the full rect with `body` grey.
+ *   2. Overlay the 4 trapezoid faces with penta's offWhite/black α-overlays
+ *      so lighting matches the reference game exactly.
+ *
+ * The `inset` parameter selects either the shallow 9% bevel (directional /
+ * armor / cracked) or the steep 44% pyramid (generic).
+ */
+function SpecialFrustum({
+  size,
+  body,
+  inset,
+}: {
+  size: number;
+  body: string;
+  inset: number;
+}) {
+  const paths = useMemo(() => {
+    const b = size * inset;
+    return {
+      top: `M0 0 L${size} 0 L${size - b} ${b} L${b} ${b} Z`,
+      left: `M0 0 L${b} ${b} L${b} ${size - b} L0 ${size} Z`,
+      right: `M${size} 0 L${size} ${size} L${size - b} ${size - b} L${size - b} ${b} Z`,
+      bottom: `M0 ${size} L${size} ${size} L${size - b} ${size - b} L${b} ${size - b} Z`,
+    };
+  }, [size, inset]);
+
   return (
     <Group>
-      <Path path={left} color={OBS_ACCENT} />
-      <Path path={right} color={OBS_ACCENT} />
+      <Rect x={0} y={0} width={size} height={size} color={body} />
+      <Path path={paths.top} color={OBS_BEVEL_TOP} />
+      <Path path={paths.left} color={OBS_BEVEL_LEFT} />
+      <Path path={paths.right} color={OBS_BEVEL_RIGHT} />
+      <Path path={paths.bottom} color={OBS_BEVEL_BOTTOM} />
+    </Group>
+  );
+}
+
+function ArrowsHoriz({ size }: { size: number }) {
+  return (
+    <Group>
+      <Path path={pentaPath(size, H_LEFT_ARROW)} color={OBS_ACCENT} />
+      <Path path={pentaPath(size, H_RIGHT_ARROW)} color={OBS_ACCENT} />
+      <Path path={pentaPath(size, H_BAR)} color={OBS_ACCENT} />
     </Group>
   );
 }
 
 function ArrowsVert({ size }: { size: number }) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const arm = size * 0.18;
-  const bar = size * 0.08;
-  const offset = size * 0.22;
-  const up = `M${cx} ${cy - offset} L${cx - arm} ${cy - offset + arm} L${cx - bar} ${cy - offset + arm} L${cx - bar} ${cy} L${cx + bar} ${cy} L${cx + bar} ${cy - offset + arm} L${cx + arm} ${cy - offset + arm} Z`;
-  const dn = `M${cx} ${cy + offset} L${cx - arm} ${cy + offset - arm} L${cx - bar} ${cy + offset - arm} L${cx - bar} ${cy} L${cx + bar} ${cy} L${cx + bar} ${cy + offset - arm} L${cx + arm} ${cy + offset - arm} Z`;
   return (
     <Group>
-      <Path path={up} color={OBS_ACCENT} />
-      <Path path={dn} color={OBS_ACCENT} />
+      <Path path={pentaPath(size, V_TOP_ARROW)} color={OBS_ACCENT} />
+      <Path path={pentaPath(size, V_BOT_ARROW)} color={OBS_ACCENT} />
+      <Path path={pentaPath(size, V_BAR)} color={OBS_ACCENT} />
     </Group>
   );
 }
 
-function ArmorBolts({ size }: { size: number }) {
-  const r = size * 0.06;
-  const inset = size * 0.18;
+/**
+ * Armor plate + 4 corner bolts — penta's "armor" (durable fresh) treatment.
+ * Plate: 15% inset rounded rect, 10% radius, #A0A0A0 fill + #606060 5%
+ * stroke. Bolts: 4 circles radius 4% at 22% inset, #404040.
+ */
+function ArmorPlate({ size }: { size: number }) {
+  const inset = size * 0.15;
+  const plate = size - 2 * inset;
+  const r = size * 0.1;
+  const stroke = size * 0.05;
+  const boltInset = size * 0.22;
+  const rBolt = size * 0.04;
+  const bolts: [number, number][] = [
+    [boltInset, boltInset],
+    [size - boltInset, boltInset],
+    [boltInset, size - boltInset],
+    [size - boltInset, size - boltInset],
+  ];
   return (
     <Group>
-      <Circle cx={inset} cy={inset} r={r} color={OBS_BOLT} />
-      <Circle cx={size - inset} cy={inset} r={r} color={OBS_BOLT} />
-      <Circle cx={inset} cy={size - inset} r={r} color={OBS_BOLT} />
-      <Circle cx={size - inset} cy={size - inset} r={r} color={OBS_BOLT} />
+      <RoundedRect
+        x={inset}
+        y={inset}
+        width={plate}
+        height={plate}
+        r={r}
+        color={OBS_ARMOR_FILL}
+      />
+      <RoundedRect
+        x={inset}
+        y={inset}
+        width={plate}
+        height={plate}
+        r={r}
+        color={OBS_ARMOR_STROKE}
+        style="stroke"
+        strokeWidth={stroke}
+      />
+      {bolts.map(([cx, cy], i) => (
+        <Circle key={i} cx={cx} cy={cy} r={rBolt} color={OBS_BOLT} />
+      ))}
     </Group>
   );
 }
 
+/**
+ * Multi-branch crack pattern — penta's exact coords from
+ * SpecialBlockGeometry.crackedPattern(). 6% stroke width, round cap/join.
+ */
 function CrackPattern({ size }: { size: number }) {
-  // Jagged crack path — single stroke so the grey body reads through.
   const w = size * 0.06;
-  const p = `M${size * 0.2} ${size * 0.3} L${size * 0.45} ${size * 0.48} L${size * 0.3} ${size * 0.6} L${size * 0.7} ${size * 0.75}`;
-  return <Path path={p} color={OBS_CRACK} style="stroke" strokeWidth={w} />;
+  const main = `M${size * 0.2} ${size * 0.1} L${size * 0.4} ${size * 0.4} L${size * 0.3} ${size * 0.6} L${size * 0.6} ${size * 0.8}`;
+  const branchA = `M${size * 0.4} ${size * 0.4} L${size * 0.7} ${size * 0.3} L${size * 0.85} ${size * 0.5}`;
+  const branchB = `M${size * 0.6} ${size * 0.8} L${size * 0.5} ${size * 0.95}`;
+  return (
+    <Path
+      path={`${main} ${branchA} ${branchB}`}
+      color={OBS_CRACK}
+      style="stroke"
+      strokeWidth={w}
+      strokeCap="round"
+      strokeJoin="round"
+    />
+  );
 }
 
-function CompositeBadge({ size }: { size: number }) {
-  // h/v needs — draw both horiz and vert arrow markers but smaller and at
-  // opposite corners. The engine tracks needs.h / needs.v separately so we
-  // can later dim whichever has already been satisfied.
-  const sz = size * 0.7;
-  const off = (size - sz) / 2;
+/**
+ * Tiny red central square for `basic` (penta's generic). centerInset 19,
+ * centerSize 5 at baseSize 43 — sits at the tip of the 44%-inset pyramid.
+ */
+function GenericDot({ size }: { size: number }) {
+  const s = size / 43;
+  const inset = 19 * s;
+  const dotSize = 5 * s;
   return (
-    <Group transform={[{ translateX: off }, { translateY: off }]}>
-      <ArrowsHoriz size={sz} />
-      <ArrowsVert size={sz} />
-    </Group>
+    <Rect x={inset} y={inset} width={dotSize} height={dotSize} color={OBS_GENERIC_DOT} />
   );
 }
 
@@ -187,46 +323,57 @@ export function ObstacleShape({
   size,
   obstacleId,
   hp,
+  pulseOpacity,
 }: {
   size: number;
   obstacleId: ObstacleId;
   hp: number;
+  /**
+   * 0–1 sinusoid (penta's full beacon pulse) driven at the canvas level.
+   * Applied only to the icon layer of basic/horiz/vert/composite. Armor
+   * bolts and cracks stay solid since structural damage shouldn't breathe.
+   */
+  pulseOpacity?: SharedValue<number>;
 }) {
   if (obstacleId === 'durable2') {
     const cracked = hp <= 1;
     return (
       <Group>
-        <BeveledBlockShape
+        <SpecialFrustum
           size={size}
-          colors={cracked ? OBS_BEVEL_CRACKED : OBS_BEVEL_FRESH}
-          bevelFraction={DEFAULT_BEVEL_FRACTION}
+          body={cracked ? OBS_BODY_CRACKED : OBS_BODY_STANDARD}
+          inset={PENTA_INSET_DIRECTIONAL}
         />
-        {cracked ? <CrackPattern size={size} /> : <ArmorBolts size={size} />}
+        {cracked ? <CrackPattern size={size} /> : <ArmorPlate size={size} />}
       </Group>
     );
   }
 
-  let badge: React.ReactNode = null;
+  const isGeneric = obstacleId === 'basic';
+  const inset = isGeneric ? PENTA_INSET_GENERIC : PENTA_INSET_DIRECTIONAL;
+
+  let icon: React.ReactNode = null;
   if (obstacleId === 'basic') {
-    badge = (
-      <Circle cx={size / 2} cy={size / 2} r={size * 0.08} color={OBS_GENERIC_DOT} />
-    );
+    icon = <GenericDot size={size} />;
   } else if (obstacleId === 'horiz') {
-    badge = <ArrowsHoriz size={size} />;
+    icon = <ArrowsHoriz size={size} />;
   } else if (obstacleId === 'vert') {
-    badge = <ArrowsVert size={size} />;
+    icon = <ArrowsVert size={size} />;
   } else if (obstacleId === 'composite') {
-    badge = <CompositeBadge size={size} />;
+    // angelica-only type. Both arrow sets share the frame — penta doesn't
+    // render this combination so we overlay the two icons at full size.
+    icon = (
+      <Group>
+        <ArrowsHoriz size={size} />
+        <ArrowsVert size={size} />
+      </Group>
+    );
   }
 
   return (
     <Group>
-      <BeveledBlockShape
-        size={size}
-        colors={OBS_BEVEL_BASIC}
-        bevelFraction={DEFAULT_BEVEL_FRACTION}
-      />
-      {badge}
+      <SpecialFrustum size={size} body={OBS_BODY_STANDARD} inset={inset} />
+      {icon ? <Group opacity={pulseOpacity}>{icon}</Group> : null}
     </Group>
   );
 }
