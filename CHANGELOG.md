@@ -118,6 +118,17 @@
 
 ### Fixed
 
+- 블록매치 v2 에서 **iOS 빌드 시 드래그 히트 영역이 보드와 대기열에 걸쳐
+  엉뚱한 위치에서 잡히고, 고스트 블록이 플로팅 피스와 다른 행에 표시되던
+  문제**를 고쳤습니다. iOS에서는 `View.measureInWindow` 의 첫 콜백이
+  네비게이션 트랜지션·safe-area 전파가 끝나기 전에 실행되어 stale 한
+  윈도우 좌표가 `trayRect` / `boardOriginY` 에 저장되었고, 이후 gesture
+  handler 의 `absoluteX/Y` (정착 후 윈도우 좌표)와 어긋나 있었습니다.
+  `BlockMatchGameV2` 마운트 직후 150 ms · 600 ms 시점에 `measureBoard`
+  / `measureTray` 를 한 번 더 호출해 정착된 값으로 재동기화하도록 했습니다.
+  함께 불필요하던 내부 `SafeAreaView edges={['top']}` 도 제거했습니다 —
+  `Stack.Screen` 헤더가 이미 상단 safe-area 를 확보합니다.
+
 - 블록매치 v2 에서 드래그 중 **현재 위치에 놓으면 클리어되는 행/열을 미리
   강조 표시하던 라인 클리어 하이라이트가 동작하지 않던 문제**를 고쳤습니다.
   단일 캔버스 imperative Skia 렌더 파이프라인으로 재작성될 때 v1의

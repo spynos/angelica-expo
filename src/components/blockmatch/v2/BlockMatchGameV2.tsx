@@ -7,7 +7,6 @@ import {
 } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -224,6 +223,25 @@ export function BlockMatchGameV2() {
   const onBoardLayout = useCallback((_e: LayoutChangeEvent) => measureBoard(), [measureBoard]);
   const onTrayLayout = useCallback((_e: LayoutChangeEvent) => measureTray(), [measureTray]);
 
+  // iOS timing fix: the first `measureInWindow` callback triggered by
+  // onLayout can return a stale window position captured before the
+  // navigation transition settles, which offsets `boardOriginY` and
+  // `trayRect.y` vs. gesture-handler `absoluteX/Y`. A couple of delayed
+  // re-reads realign them once layout is stable.
+  useEffect(() => {
+    const ids = [
+      setTimeout(() => {
+        measureBoard();
+        measureTray();
+      }, 150),
+      setTimeout(() => {
+        measureBoard();
+        measureTray();
+      }, 600),
+    ];
+    return () => ids.forEach(clearTimeout);
+  }, [measureBoard, measureTray]);
+
   // --- Dispatch wrappers ---------------------------------------------
   const managerRef = useRef<EntityManager | null>(null);
   const lastPlacedCentroidColRef = useRef<number | null>(null);
@@ -277,11 +295,10 @@ export function BlockMatchGameV2() {
 
   const boardH = BOARD_SIZE * cellSize;
 
+  // Plain View root — Stack.Screen's header already reserves the top safe
+  // area, so an extra SafeAreaView is unnecessary here.
   return (
-    <SafeAreaView
-      style={[styles.root, { backgroundColor: palette.background }]}
-      edges={['top']}
-    >
+    <View style={[styles.root, { backgroundColor: palette.background }]}>
       <ScorePanelV2
         score={state.score}
         highScore={state.highScore}
@@ -338,7 +355,7 @@ export function BlockMatchGameV2() {
       </GestureDetector>
 
       <DragPieceOverlay entity={drag} cellSize={cellSize} turns={turns} />
-    </SafeAreaView>
+    </View>
   );
 }
 
