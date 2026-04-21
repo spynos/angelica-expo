@@ -40,7 +40,14 @@
       "Bash(cp /tmp/commit-backup/v2/overlays/StageCurtain.tsx src/components/blockmatch/v2/overlays/StageCurtain.tsx)",
       "Bash(cp /tmp/commit-backup/v2/overlays/LineClearPopup.tsx src/components/blockmatch/v2/overlays/LineClearPopup.tsx)",
       "Bash(cp /tmp/commit-backup/v2/engine/entityManager.ts src/components/blockmatch/v2/engine/entityManager.ts)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(xcodebuild -version)",
+      "Bash(swift --version)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(xcrun devicectl *)",
+      "Bash(lsof -ti:8081)"
     ]
   }
 }
