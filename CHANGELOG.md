@@ -9,6 +9,14 @@
 
 ### Changed
 
+- Expo SDK 55 호환 패치 버전으로 의존성을 정합화했습니다 (`expo`, `expo-auth-session`,
+  `expo-dev-client`, `expo-image`, `expo-linking`, `expo-notifications`, `expo-router`,
+  `expo-splash-screen`, `expo-system-ui`, `expo-updates`, `react-native`,
+  `react-native-worklets`). 특히 `expo-modules-core@55.0.22`가 peer로 요구하는
+  `react-native-worklets ^0.7.4 || ^0.8.0`에 맞춰 `0.7.2 → 0.7.4`로 올렸습니다.
+  이전 버전 조합에서는 EAS Build의 `npm ci --include=dev` 단계가 lockfile 미스매치로
+  실패했습니다.
+
 - 블록매치 UI를 **단일 `<Canvas>` + Reanimated shared value 기반 imperative
   렌더 모델**로 전면 재설계했습니다 (ADR-002). 이전의 선언적 Skia 컴포넌트
   트리(Board / PieceTray / DraggablePiece / GhostOverlay / floating
