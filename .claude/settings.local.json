@@ -47,7 +47,14 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "Bash(xcrun devicectl *)",
-      "Bash(lsof -ti:8081)"
+      "Bash(lsof -ti:8081)",
+      "Bash(eas build *)",
+      "Bash(eas build:view 7515166d-db15-4a81-bdf9-5d764f8bb93d)",
+      "Bash(npm ci *)",
+      "Bash(npm ls *)",
+      "Bash(eas build:view 7515166d-db15-4a81-bdf9-5d764f8bb93d --json)",
+      "Bash(npm config *)",
+      "Bash(npm --version)"
     ]
   }
 }
