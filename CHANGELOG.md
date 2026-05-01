@@ -7,6 +7,19 @@
 
 ## [Unreleased]
 
+### Removed
+
+- Expo Go 호환을 위해 추가했던 런타임 분기 코드를 모두 제거했습니다. 앞으로는
+  development build / production build만 지원합니다. 구체적으로:
+  `src/lib/storage.ts`의 `isExpoGo` 감지 로직과 AsyncStorage 백업 어댑터를
+  제거하고 MMKV 단독 사용으로 되돌렸으며, `src/components/LiquidTabBar.tsx`·
+  `src/lib/social-auth.ts`·`app/(auth)/login.tsx`에서 `expo-glass-effect`,
+  `expo-apple-authentication`을 동적 `require`로 감싸던 fallback 분기를
+  제거하고 정적 `import`로 복원했습니다. `package.json`에서도 `start:go`
+  스크립트를 삭제했습니다. AsyncStorage 의존성 자체는 Supabase 세션 저장에
+  계속 쓰이므로 유지합니다. 결정 배경은 `docs/adr/001-drop-expo-go-support.md`
+  참조.
+
 ### Changed
 
 - Expo SDK 55 호환 패치 버전으로 의존성을 정렬했습니다 (`npx expo install --check`).

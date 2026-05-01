@@ -1,20 +1,10 @@
 import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 
-import { isExpoGo } from './storage';
 import { supabase } from './supabase';
-
-// expo-apple-authentication uses native code unavailable in Expo Go.
-let AppleAuthentication: typeof import('expo-apple-authentication') | null = null;
-if (!isExpoGo) {
-  try {
-    AppleAuthentication = require('expo-apple-authentication');
-  } catch {
-    // native module unavailable
-  }
-}
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -28,11 +18,6 @@ WebBrowser.maybeCompleteAuthSession();
 export async function signInWithApple() {
   if (Platform.OS !== 'ios') {
     throw new Error('Apple Sign-In is only available on iOS.');
-  }
-  if (!AppleAuthentication) {
-    throw new Error(
-      'Expo Go 환경에서는 Apple 로그인을 사용할 수 없습니다. 개발 빌드(dev client)를 사용해 주세요.',
-    );
   }
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [
@@ -104,5 +89,5 @@ export async function signInWithGoogle() {
 }
 
 // Re-export for places that want to noop-import to keep tree-shaking happy.
-export const _appleAuthAvailable = AppleAuthentication?.isAvailableAsync ?? (() => Promise.resolve(false));
+export const _appleAuthAvailable = AppleAuthentication.isAvailableAsync;
 export { Crypto };

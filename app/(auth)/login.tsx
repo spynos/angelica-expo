@@ -1,24 +1,14 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/src/components/ui/Button';
 import { TextField } from '@/src/components/ui/TextField';
-import { isExpoGo } from '@/src/lib/storage';
 import { supabase } from '@/src/lib/supabase';
 import { signInWithApple, signInWithGoogle } from '@/src/lib/social-auth';
-
-// Native Apple button — unavailable in Expo Go.
-let AppleAuthentication: typeof import('expo-apple-authentication') | null = null;
-if (!isExpoGo) {
-  try {
-    AppleAuthentication = require('expo-apple-authentication');
-  } catch {
-    // native module unavailable
-  }
-}
 
 export default function LoginScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -113,21 +103,17 @@ export default function LoginScreen() {
         </View>
 
         {Platform.OS === 'ios' ? (
-          AppleAuthentication ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={
-                scheme === 'dark'
-                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-              }
-              cornerRadius={10}
-              style={styles.appleButton}
-              onPress={handleApple}
-            />
-          ) : (
-            <Button label="Apple로 계속하기" variant="secondary" onPress={handleApple} />
-          )
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={
+              scheme === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={10}
+            style={styles.appleButton}
+            onPress={handleApple}
+          />
         ) : null}
         <View style={{ height: Spacing.md }} />
         <Button label="Google로 계속하기" variant="secondary" onPress={handleGoogle} />

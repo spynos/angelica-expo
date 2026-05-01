@@ -1,5 +1,6 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
+import { GlassContainer, GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { ReactNode, useEffect, useMemo } from 'react';
@@ -15,24 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Palette, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { isExpoGo } from '@/src/lib/storage';
-
-// expo-glass-effect contains native code not available in Expo Go.
-// Dynamic require so the module is never resolved in Expo Go.
-let GlassContainer: any = null;
-let GlassView: any = null;
-let isLiquidGlassAvailable: (() => boolean) | null = null;
-
-if (!isExpoGo) {
-  try {
-    const mod = require('expo-glass-effect');
-    GlassContainer = mod.GlassContainer;
-    GlassView = mod.GlassView;
-    isLiquidGlassAvailable = mod.isLiquidGlassAvailable;
-  } catch {
-    // native module unavailable — fall through to blur fallback
-  }
-}
 
 const VISIBLE_ROUTES = ['cafe', 'puzzle'] as const;
 type VisibleRoute = (typeof VISIBLE_ROUTES)[number];
@@ -42,8 +25,7 @@ const TAB_META: Record<VisibleRoute, { icon: Parameters<typeof IconSymbol>[0]['n
   puzzle: { icon: 'puzzlepiece.fill' },
 };
 
-const liquidGlassSupported =
-  Platform.OS === 'ios' && isLiquidGlassAvailable != null && isLiquidGlassAvailable();
+const liquidGlassSupported = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 function triggerHaptic() {
   if (process.env.EXPO_OS === 'ios') {
