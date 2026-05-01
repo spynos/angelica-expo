@@ -7,6 +7,17 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Expo SDK 55 호환 패치 버전으로 의존성을 정렬했습니다 (`npx expo install --check`).
+  `expo-auth-session`·`expo-dev-client`·`expo-image`·`expo-linking`·
+  `expo-notifications`·`expo-router`·`expo-system-ui`·`expo-updates`·
+  `react-native`·`react-native-worklets`이 패치 버전 단위로 갱신되었고
+  `package-lock.json`이 동기화되었습니다. 이는 EAS Build에서 `npm ci`가
+  `package.json`과 lock 파일 불일치(특히 `react-native-worklets@0.8.x`
+  transitive 요구)를 이유로 INSTALL_DEPENDENCIES 단계에서 실패하던 문제를
+  해결합니다.
+
 ### Added
 
 - 블록매치 블록에 사이즈(=셀 갯수)별 톤을 입히는 팔레트를 추가했습니다.
