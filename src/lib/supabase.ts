@@ -17,6 +17,9 @@ if (!supabaseUrl || !supabasePublishableKey) {
 // fetch doesn't honour the default request timeout in all network conditions,
 // so we enforce one via AbortController.
 const REQUEST_TIMEOUT_MS = 10_000;
+// [diag] Process-relative clock so events from different files share an origin.
+const DIAG_T0 = Date.now();
+const tag = () => `+${Date.now() - DIAG_T0}ms`;
 const fetchWithTimeout: typeof fetch = (input, init = {}) => {
   const controller = new AbortController();
   const upstreamSignal = init.signal;
@@ -25,8 +28,37 @@ const fetchWithTimeout: typeof fetch = (input, init = {}) => {
     else upstreamSignal.addEventListener('abort', () => controller.abort(upstreamSignal.reason));
   }
   const timer = setTimeout(() => controller.abort(new Error('supabase fetch timeout')), REQUEST_TIMEOUT_MS);
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+
+  // [diag] Log every supabase HTTP request with timing + path so we can
+  // correlate auth refresh, getSession, refreshProfile, fetchFeed on cold-start.
+  const t0 = Date.now();
+  const rawUrl =
+    typeof input === 'string'
+      ? input
+      : input instanceof Request
+        ? input.url
+        : (input as URL).toString();
+  let path = rawUrl;
+  try {
+    path = new URL(rawUrl).pathname;
+  } catch {}
+  console.log(`[diag] ${tag()} fetch START ${path}`);
+
+  return fetch(input, { ...init, signal: controller.signal })
+    .then((res) => {
+      console.log(`[diag] ${tag()} fetch OK    ${path} ${res.status} (${Date.now() - t0}ms)`);
+      return res;
+    })
+    .catch((err) => {
+      console.warn(
+        `[diag] ${tag()} fetch FAIL  ${path} (${Date.now() - t0}ms) ${err?.message ?? err}`,
+      );
+      throw err;
+    })
+    .finally(() => clearTimeout(timer));
 };
+
+export const __diagTag = tag;
 
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {

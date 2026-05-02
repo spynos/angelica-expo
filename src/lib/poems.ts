@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, __diagTag as tag } from './supabase';
 import { withTimeout } from './async';
 import type { Poem, PoemBgColor, PoemFont, PoemVisibility, PoemWithAuthor } from '@/src/types/db';
 
@@ -27,19 +27,31 @@ function shape(row: RawPoem, viewerId: string | null): PoemWithAuthor {
   };
 }
 
+// Brief backoff before retry — gives any cold-start request that timed out
+// while holding supabase-auth-js's lock a chance to be aborted by the
+// underlying fetchWithTimeout (10s) and release the lock.
+const FEED_RETRY_BACKOFF_MS = 300;
+
 export async function fetchFeed(viewerId: string | null): Promise<PoemWithAuthor[]> {
   const started = Date.now();
+  console.log(`[diag] ${tag()} fetchFeed START viewerId=${viewerId}`);
   console.log('[poems] fetchFeed start', { viewerId });
-  try {
+
+  const runQuery = async (attempt: number) => {
     const query = supabase
       .from('poems')
       .select(POEM_SELECT)
       .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .limit(50);
+    console.log(`[diag] ${tag()} fetchFeed AWAIT (attempt ${attempt})`);
     const { data, error, status } = await withTimeout(query, FEED_TIMEOUT_MS, 'fetchFeed');
+    console.log(
+      `[diag] ${tag()} fetchFeed AWAITED attempt=${attempt} (${Date.now() - started}ms)`,
+    );
     if (error) {
       console.warn('[poems] fetchFeed error', {
+        attempt,
         status,
         code: (error as any).code,
         message: error.message,
@@ -48,12 +60,27 @@ export async function fetchFeed(viewerId: string | null): Promise<PoemWithAuthor
       });
       throw error;
     }
+    return { data, status };
+  };
+
+  try {
+    let result: Awaited<ReturnType<typeof runQuery>>;
+    try {
+      result = await runQuery(1);
+    } catch (e: any) {
+      if (e?.name !== 'TimeoutError') throw e;
+      console.warn(
+        `[diag] ${tag()} fetchFeed timed out on attempt 1, retrying once after ${FEED_RETRY_BACKOFF_MS}ms`,
+      );
+      await new Promise((r) => setTimeout(r, FEED_RETRY_BACKOFF_MS));
+      result = await runQuery(2);
+    }
     console.log('[poems] fetchFeed ok', {
       ms: Date.now() - started,
-      count: data?.length ?? 0,
-      status,
+      count: result.data?.length ?? 0,
+      status: result.status,
     });
-    return (data as unknown as RawPoem[]).map((r) => shape(r, viewerId));
+    return (result.data as unknown as RawPoem[]).map((r) => shape(r, viewerId));
   } catch (e: any) {
     console.warn('[poems] fetchFeed threw', {
       ms: Date.now() - started,

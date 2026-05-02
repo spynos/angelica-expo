@@ -3,7 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { withTimeout } from '@/src/lib/async';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, __diagTag as tag } from '@/src/lib/supabase';
 import type { UserProfile } from '@/src/types/db';
 
 type AuthState = {
@@ -76,14 +76,23 @@ export function useAuthBootstrap() {
     const init = async () => {
       setStatus('session');
       let session: Session | null = null;
+      const t0 = Date.now();
+      console.log(`[diag] ${tag()} bootstrap.getSession START`);
       try {
         const { data } = await withTimeout(
           supabase.auth.getSession(),
           SESSION_TIMEOUT_MS,
           'getSession',
         );
+        console.log(
+          `[diag] ${tag()} bootstrap.getSession OK (${Date.now() - t0}ms) hasSession=${!!data.session}`,
+        );
         session = data.session ?? null;
       } catch (err) {
+        console.warn(
+          `[diag] ${tag()} bootstrap.getSession FAIL (${Date.now() - t0}ms)`,
+          err,
+        );
         console.warn('[auth] getSession failed, continuing as signed-out', err);
         if (!cancelled) {
           useAuthStore.setState({ session: null, user: null, loading: false });
@@ -101,13 +110,22 @@ export function useAuthBootstrap() {
 
       if (session?.user) {
         setStatus('profile');
+        const t1 = Date.now();
+        console.log(`[diag] ${tag()} bootstrap.refreshProfile START`);
         try {
           await withTimeout(
             useAuthStore.getState().refreshProfile(),
             PROFILE_TIMEOUT_MS,
             'refreshProfile',
           );
+          console.log(
+            `[diag] ${tag()} bootstrap.refreshProfile OK (${Date.now() - t1}ms)`,
+          );
         } catch (err) {
+          console.warn(
+            `[diag] ${tag()} bootstrap.refreshProfile FAIL (${Date.now() - t1}ms)`,
+            err,
+          );
           // Profile fetch is non-critical; let the app start and retry later.
           console.warn('[auth] refreshProfile failed, continuing without profile', err);
         }
@@ -121,20 +139,36 @@ export function useAuthBootstrap() {
       finish('error');
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(
+        `[diag] ${tag()} onAuthStateChange event=${event} hasSession=${!!session}`,
+      );
       useAuthStore.setState({
         session,
         user: session?.user ?? null,
         loading: false,
       });
-      if (session?.user) {
-        try {
-          await useAuthStore.getState().refreshProfile();
-        } catch (err) {
-          console.warn('[auth] refreshProfile on auth change failed', err);
-        }
-      } else {
+      if (!session?.user) {
         useAuthStore.setState({ profile: null });
+        return;
+      }
+      // INITIAL_SESSION is already covered by init() above; TOKEN_REFRESHED
+      // doesn't change profile data. Refreshing here on cold-start used to
+      // race init()'s refreshProfile and queue a duplicate request behind the
+      // supabase-auth-js lock, which is the cold-start hang we hit when JWT
+      // refresh got involved.
+      if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
+      const t = Date.now();
+      console.log(`[diag] ${tag()} onAuth.refreshProfile START (event=${event})`);
+      try {
+        await useAuthStore.getState().refreshProfile();
+        console.log(`[diag] ${tag()} onAuth.refreshProfile OK (${Date.now() - t}ms)`);
+      } catch (err) {
+        console.warn(
+          `[diag] ${tag()} onAuth.refreshProfile FAIL (${Date.now() - t}ms)`,
+          err,
+        );
+        console.warn('[auth] refreshProfile on auth change failed', err);
       }
     });
 

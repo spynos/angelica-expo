@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 문학카페 피드가 dev build cold-start 직후 8초 동안 멈춘 뒤 timeout으로
+  실패하던 문제를 해결했습니다 (Metro reload 한 번이면 회복되던 증상).
+  원인은 두 단계가 겹친 것이었습니다. 첫째, `useAuthBootstrap.init()`과
+  `onAuthStateChange(INITIAL_SESSION)` 콜백이 둘 다 `refreshProfile()`을
+  호출해 cold-start 시 `/rest/v1/users` 쿼리가 중복 발사되었고,
+  supabase-auth-js의 auth lock 위에서 JWT 갱신까지 끼면 lock 점유 시간이
+  8초를 넘겨 뒤따르는 `fetchFeed`가 timeout을 맞았습니다. 둘째,
+  `withTimeout`이 4초에 reject되어도 내부 fetch는 abort되지 않아 좀비
+  요청이 lock을 계속 잡고 있었습니다. 수정으로 (1) `onAuthStateChange`는
+  `SIGNED_IN`·`USER_UPDATED`에서만 `refreshProfile`을 호출해 중복을
+  제거하고, (2) `fetchFeed`에 TimeoutError 한정 1회 retry(300ms 백오프)를
+  추가해 좀비 lock 시나리오에서 자체 회복하도록 했습니다. 진단용
+  `[diag]` 로그는 supabase.ts·auth.ts·poems.ts에 남겨두어 향후 같은
+  증상을 timeline으로 추적할 수 있게 했습니다.
+
 ### Removed
 
 - Expo Go 호환을 위해 추가했던 런타임 분기 코드를 모두 제거했습니다. 앞으로는
