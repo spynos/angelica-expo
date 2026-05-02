@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
 
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Button } from '@/src/components/ui/Button';
-import { HeaderBackButton } from '@/src/components/HeaderBackButton';
 import { registerPushToken, setNotificationPreferences } from '@/src/lib/push';
 import { supabase } from '@/src/lib/supabase';
 import { useAuthStore } from '@/src/store/auth';
@@ -68,14 +66,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
-      <Stack.Screen
-        options={{
-          title: '프로필',
-          headerShown: true,
-          headerLeft: () => <HeaderBackButton />,
-          headerBackTitle: '',
-        }}
-      />
+      <View style={styles.header}>
+        <Text style={[Typography.display, { color: palette.text }]}>계정</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
         <View
           style={[
@@ -171,6 +164,11 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  header: {
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
   content: { padding: Spacing.xxl, paddingBottom: Spacing.xxl * 4 },
   avatar: {
     width: 80,

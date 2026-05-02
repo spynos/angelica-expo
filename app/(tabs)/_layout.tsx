@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 
-import { LiquidTabBar } from '@/src/components/LiquidTabBar';
+import { BottomNavBar } from '@/src/components/BottomNavBar';
 import { useAuthStore } from '@/src/store/auth';
 
 export default function TabLayout() {
@@ -12,21 +12,14 @@ export default function TabLayout() {
   return (
     <Tabs
       initialRouteName="cafe"
-      tabBar={(props) => <LiquidTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 0,
-        },
-      }}
+      tabBar={(props) => <BottomNavBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="cafe" options={{ title: '문학카페' }} />
-      <Tabs.Screen name="puzzle" options={{ title: '퍼즐게임' }} />
-      <Tabs.Screen name="profile" options={{ href: null, title: '프로필' }} />
+      <Tabs.Screen name="cafe" options={{ title: '포스트' }} />
+      <Tabs.Screen name="puzzle" options={{ title: '퍼즐' }} />
+      <Tabs.Screen name="bookcafe" options={{ title: '북카페' }} />
+      <Tabs.Screen name="profile" options={{ title: '계정' }} />
     </Tabs>
   );
 }

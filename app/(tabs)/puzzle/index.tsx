@@ -6,7 +6,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { HeaderAvatarButton } from '@/src/components/HeaderAvatarButton';
 import { getAllActivities, getRecentOrder, type GameActivity } from '@/src/lib/games/activity';
 import { GAMES, type GameId, type GameMeta } from '@/src/lib/games/registry';
 
@@ -47,7 +46,6 @@ export default function PuzzleHome() {
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[Typography.display, { color: palette.text }]}>퍼즐</Text>
-        <HeaderAvatarButton />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.greetingBlock}>

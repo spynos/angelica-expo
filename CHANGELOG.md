@@ -7,6 +7,33 @@
 
 ## [Unreleased]
 
+### Added
+
+- 하단 메뉴바를 YouTube 스타일 클래식 bottom nav로 전환했습니다. 좌측부터
+  `포스트 / 퍼즐 / + / 북카페 / 계정` 5개 슬롯이 동일 너비로 자리하고, 56dp
+  높이에 솔리드 배경 + 상단 hairline 보더, 24px 아이콘 + 10pt 라벨로
+  통일했습니다. 가운데 `+` 슬롯은 실제 라우트가 아니라 가상 버튼으로 카페
+  쓰기 모달(`/(tabs)/cafe/write`)을 직접 push합니다. 게임 화면에서는
+  기존처럼 자동으로 숨깁니다 (`src/components/BottomNavBar.tsx`).
+- 북카페(`/(tabs)/bookcafe`) 탭을 신설했습니다. 출판물 단위로 묶은 콘텐츠를
+  제공할 자리이며, 우선 "준비 중" 플레이스홀더만 노출합니다.
+
+### Changed
+
+- 카페 화면의 헤더 제목을 `문학카페` → `포스트`로 변경했습니다 (하단 탭
+  라벨과 일치).
+- 계정 진입 경로를 통일했습니다. 카페·퍼즐 화면 우측 상단의 프로필 아바타
+  버튼(`HeaderAvatarButton`)을 제거하고, 하단 `계정` 탭으로 단일화했습니다.
+  계정 화면도 push 모달이 아닌 일반 탭으로 동작하도록 `Stack.Screen` 헤더와
+  뒤로가기 버튼을 제거했습니다.
+
+### Removed
+
+- 플로팅 Liquid Glass 알약 형태의 `LiquidTabBar`를 제거했습니다. 새 클래식
+  bottom nav로 대체되었으며, `expo-glass-effect` 의존 코드도 함께 정리되어
+  탭바에서는 더 이상 사용되지 않습니다. 헤더 우측 상단 `HeaderAvatarButton`
+  컴포넌트도 함께 삭제했습니다.
+
 ### Fixed
 
 - 문학카페 피드가 dev build cold-start 직후 8초 동안 멈춘 뒤 timeout으로
