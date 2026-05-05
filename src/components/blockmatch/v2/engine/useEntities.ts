@@ -1,6 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-import type { GameState } from '@/src/lib/blockmatch/types';
+import type { GameState, TurnSummary } from '@/src/lib/blockmatch/types';
 
 import { EntityManager } from './entityManager';
 import type { Entity } from './types';
@@ -19,7 +19,10 @@ import type { Entity } from './types';
  * stages or restarting the game is handled by the `state` effect which
  * re-syncs on every Zustand state change.
  */
-export function useEntities(state: GameState): {
+export function useEntities(
+  state: GameState,
+  turn: TurnSummary | null,
+): {
   entities: Entity[];
   manager: EntityManager;
 } {
@@ -55,8 +58,10 @@ export function useEntities(state: GameState): {
       return;
     }
     // Incremental update inside the same stage (place / clear lines).
-    manager.syncFromState(state);
-  }, [state, manager]);
+    // `turn` carries `rowsCleared` / `colsCleared` so the manager can
+    // stagger each cleared line along its own axis.
+    manager.syncFromState(state, turn);
+  }, [state, turn, manager]);
 
   return { entities, manager };
 }

@@ -319,6 +319,7 @@ export function BlockMatchGameV2() {
           >
             <BoardCanvasV2
               state={state}
+              lastTurn={lastTurn}
               cellSize={cellSize}
               ghost={ghost}
               boardBits={boardBits}

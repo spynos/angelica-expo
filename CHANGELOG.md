@@ -7,6 +7,21 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 블록매치 **라인 클리어 stagger가 가로 라인에서 작동하지 않던 버그**를
+  수정했습니다. 기존 `EntityManager.syncFromState`는 사라지는 셀들을 row
+  index에만 의존해 stagger했기 때문에, 세로 라인 클리어는 위→아래 cascade가
+  보였지만 가로 라인 클리어는 한 row의 셀들이 모두 같은 delay로 동시에
+  사라졌고, 가로+세로 동시 클리어 시에는 가로행이 세로 cascade 흐름 속에서
+  순간적으로 번쩍이는 모습이 됐습니다. 매니저가 직전 turn의 `rowsCleared`/
+  `colsCleared`를 받아 — 가로 라인은 column 인덱스로, 세로 라인은 row
+  인덱스로 — **라인 자기 축을 따라 stagger**하도록 변경했습니다. 교차점
+  셀은 두 후보 delay 중 작은 값을 선택해 가장 빠른 cascade에 합류합니다.
+  변경 파일: `src/components/blockmatch/v2/engine/{entityManager,useEntities}.ts`,
+  `src/components/blockmatch/v2/canvas/BoardCanvasV2.tsx`,
+  `src/components/blockmatch/v2/BlockMatchGameV2.tsx`.
+
 ### Changed
 
 - 블록매치 **효과음·햅틱 트리거를 wiring 완료**해 베타 직전 단계로 끌어올렸습니다.

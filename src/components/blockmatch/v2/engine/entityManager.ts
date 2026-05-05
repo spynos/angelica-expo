@@ -1,7 +1,7 @@
 import { Easing, withTiming } from 'react-native-reanimated';
 
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
-import type { Cell, GameState, Offset } from '@/src/lib/blockmatch/types';
+import type { Cell, GameState, Offset, TurnSummary } from '@/src/lib/blockmatch/types';
 
 import {
   DUR_LINE_CLEAR,
@@ -116,34 +116,45 @@ export class EntityManager {
    * immediately in IDLE phase — the stage start should feel solid, not
    * animated. Subsequent syncs animate additions and removals.
    *
-   * Cells transitioning to empty are batched and staggered by row so the
-   * line-clear animation cascades top→bottom instead of all at once.
+   * Cells transitioning to empty are staggered along their own line axis:
+   * cells in a cleared row cascade left→right by column index, and cells
+   * in a cleared column cascade top→bottom by row index. Cells at the
+   * intersection of a cleared row and column take the smaller of the two
+   * candidate delays so they animate at the earliest cascade arrival.
+   *
+   * `turn` is the `TurnSummary` returned by the just-applied reducer
+   * action. Without it (initial sync, restart) the toClear set is empty
+   * anyway, but we fall back to delay 0 defensively.
    */
-  syncFromState(state: GameState): void {
+  syncFromState(state: GameState, turn?: TurnSummary | null): void {
     const board = state.board;
     const isInitial = this.lastBoard === null;
 
-    // Collect cells that will clear so we can stagger them by row.
-    const toClear: Array<{ i: number; row: number; prevKind: 'block' | 'obstacle' }> = [];
+    const toClear: Array<{ i: number; prevKind: 'block' | 'obstacle' }> = [];
 
     for (let i = 0; i < board.length; i++) {
       const prev = this.lastBoard ? this.lastBoard[i] : null;
       const curr = board[i];
 
       if (curr.kind === 'empty' && (prev?.kind === 'block' || prev?.kind === 'obstacle')) {
-        toClear.push({ i, row: Math.floor(i / BOARD_SIZE), prevKind: prev.kind });
+        toClear.push({ i, prevKind: prev.kind });
       } else {
         this.reconcileCell(i, prev, curr, isInitial);
       }
     }
 
     if (toClear.length > 0) {
-      const uniqueRows = [...new Set(toClear.map((c) => c.row))].sort((a, b) => a - b);
-      const rowDelay = new Map<number, number>();
-      uniqueRows.forEach((row, idx) => rowDelay.set(row, idx * STAGGER_LINE_CLEAR_MS));
+      const clearedRows = new Set(turn?.rowsCleared ?? []);
+      const clearedCols = new Set(turn?.colsCleared ?? []);
 
-      for (const { i, row, prevKind } of toClear) {
-        const delay = rowDelay.get(row) ?? 0;
+      for (const { i, prevKind } of toClear) {
+        const row = Math.floor(i / BOARD_SIZE);
+        const col = i % BOARD_SIZE;
+        let delay = Number.POSITIVE_INFINITY;
+        if (clearedRows.has(row)) delay = Math.min(delay, col * STAGGER_LINE_CLEAR_MS);
+        if (clearedCols.has(col)) delay = Math.min(delay, row * STAGGER_LINE_CLEAR_MS);
+        if (!Number.isFinite(delay)) delay = 0;
+
         if (prevKind === 'block') this.clearBlock(i, delay);
         else this.clearObstacle(i, delay);
       }

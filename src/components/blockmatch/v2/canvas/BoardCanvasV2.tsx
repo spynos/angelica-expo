@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { type SharedValue } from 'react-native-reanimated';
 
-import type { GameState } from '@/src/lib/blockmatch/types';
+import type { GameState, TurnSummary } from '@/src/lib/blockmatch/types';
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
 
 import type { EntityManager } from '../engine/entityManager';
@@ -29,19 +29,22 @@ import { GhostNode } from './GhostNode';
 
 export function BoardCanvasV2({
   state,
+  lastTurn,
   cellSize,
   ghost,
   boardBits,
   onManager,
 }: {
   state: GameState;
+  /** Most recent turn summary; drives per-line-axis clear stagger. */
+  lastTurn: TurnSummary | null;
   cellSize: number;
   ghost?: GhostEntity;
   /** Worklet-shareable board occupancy used by the line-clear hint. */
   boardBits?: SharedValue<number[]>;
   onManager?: (manager: EntityManager) => void;
 }) {
-  const { entities, manager } = useEntities(state);
+  const { entities, manager } = useEntities(state, lastTurn);
 
   const onManagerRef = useRef(onManager);
   onManagerRef.current = onManager;
