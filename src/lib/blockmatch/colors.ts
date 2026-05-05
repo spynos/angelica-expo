@@ -1,13 +1,16 @@
 /**
  * Per-piece block color palette.
  *
- * Flat-paint era (ADR 003):
- * - Each piece *size* (1..5) has one solid pastel color. Saturation low,
- *   lightness high so shapes read softly on the cream board (#FAF7F2).
- * - No within-size hue/lightness variation: every shape of the same size
- *   uses the same fill. The bevel-color machinery further down still
- *   computes 4-face shifts but is unused by the v2 renderer; it remains
- *   only so the v1 dead-code paths still compile.
+ * Flat-paint era (ADR 003, updated 2026-05-05):
+ * - Each piece *size* (1..5) has one base hue (saturation low, lightness
+ *   high) so shapes read softly on the cream board (#FAF7F2).
+ * - **Tone-on-tone within a size**: same hue + same saturation, lightness
+ *   spread across the shape list so e.g. all 12 pentominoes share a
+ *   lavender family but each shape lands on its own rung of the ladder.
+ *   Hue spread stays 0 to preserve size-level color identity.
+ * - Bevel-color machinery further down still computes 4-face shifts but
+ *   is unused by the v2 renderer; it remains only so v1 dead-code paths
+ *   still compile.
  */
 import { piecesBySize } from './pieces';
 
@@ -21,8 +24,11 @@ const BASE: Record<1 | 2 | 3 | 4 | 5, HSL> = {
   5: { h: 278, s: 35, l: 78 }, // soft lavender — pentominoes
 };
 
-// Variation disabled in flat era — same fill across all shapes of a size.
-const L_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+// Tone-on-tone within a size: lightness ladder across shapes, hue locked.
+// Spread is the half-range — `variationFor` interpolates idx/(count-1) across
+// the shape list and applies (t-0.5)*2*spread, so the actual delta from base
+// runs from −spread to +spread.
+const L_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 4, 4: 7, 5: 9 };
 const H_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
 function hslToHex(h: number, s: number, l: number): string {
