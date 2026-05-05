@@ -12,13 +12,14 @@ import { FontFamily } from '@/constants/theme';
 
 import { DUR_CURTAIN_CLOSE, DUR_CURTAIN_OPEN } from '../engine/constants';
 
-// Curtain gradient kept in the cafe warm-cream / caramel family so the
-// stage-clear flourish doesn't break the palette set by the cream board
-// (#FAF7F2) and brand gold accent (#E8B23C). Walnut at the panel edges
-// and caramel at the seam — soft theatrical reveal without the original
-// orange chestnut neon.
-const CURTAIN_DARK = '#8A5E2E';  // muted walnut
-const CURTAIN_MID = '#D4A862';   // caramel gold
+// Pastel parchment gradient — milky beige at the panel edges fading into
+// almost-white cream at the seam. Stays inside the cafe palette family
+// (cream board #FAF7F2, brand gold #E8B23C) but pushed lighter and less
+// saturated than before for a softer, dreamier feel. Because the curtain
+// is light, the text below uses coffee/rust ink colors so the stage
+// label, number, and CLEAR! word all read against the cream ground.
+const CURTAIN_DARK = '#E6D6BC';  // milky beige
+const CURTAIN_MID = '#FBF3E2';   // pastel cream
 
 const EASING = Easing.inOut(Easing.cubic);
 
@@ -150,19 +151,19 @@ const styles = StyleSheet.create({
   stageLabel: {
     fontFamily: FontFamily.serif,
     fontSize: 22,
-    color: 'rgba(255, 234, 200, 0.75)',
+    color: 'rgba(94, 76, 50, 0.75)', // coffee ink, semi-transparent
     letterSpacing: 6,
   },
   stageNumber: {
     fontFamily: FontFamily.serifBold,
     fontSize: 80,
     lineHeight: 88,
-    color: '#FFF4E0',
+    color: '#5E4C32', // deep coffee
   },
   clearText: {
     fontFamily: FontFamily.sansBold,
     fontSize: 28,
-    color: '#E8B23C', // brand gold accent (also used by ClearHintNode)
+    color: '#9B4624', // deep rust (matches AMAZING tier in praise popup)
     letterSpacing: 4,
   },
 });
