@@ -170,7 +170,15 @@ export class EntityManager {
       if (cell.kind === 'block') {
         this.spawnBlock(row, col, cell.pieceId);
       } else if (cell.kind === 'obstacle') {
-        this.spawnObstacle(row, col, cell.obstacle.id, cell.obstacle.hp, true);
+        this.spawnObstacle(
+          row,
+          col,
+          cell.obstacle.id,
+          cell.obstacle.hp,
+          cell.obstacle.needs.h,
+          cell.obstacle.needs.v,
+          true,
+        );
       }
     }
     this.lastBoard = board;
@@ -214,9 +222,17 @@ export class EntityManager {
       // Same kind — handle internal changes.
       if (curr.kind === 'obstacle' && prev?.kind === 'obstacle') {
         const entity = this.obstacleByCell.get(i);
-        if (entity && entity.hp.value !== curr.obstacle.hp) {
-          entity.hp.value = curr.obstacle.hp;
-          // Leaves entity in IDLE; damaged flash is handled by Task #6.
+        if (entity) {
+          if (entity.hp.value !== curr.obstacle.hp) {
+            entity.hp.value = curr.obstacle.hp;
+            // Leaves entity in IDLE; damaged flash is handled by Task #6.
+          }
+          if (entity.needsH.value !== curr.obstacle.needs.h) {
+            entity.needsH.value = curr.obstacle.needs.h;
+          }
+          if (entity.needsV.value !== curr.obstacle.needs.v) {
+            entity.needsV.value = curr.obstacle.needs.v;
+          }
         }
       }
       return;
@@ -241,7 +257,15 @@ export class EntityManager {
 
     // Empty → obstacle : spawn an obstacle (only happens on stage commit).
     if (prevKind === 'empty' && curr.kind === 'obstacle') {
-      this.spawnObstacle(row, col, curr.obstacle.id, curr.obstacle.hp, !isInitial);
+      this.spawnObstacle(
+        row,
+        col,
+        curr.obstacle.id,
+        curr.obstacle.hp,
+        curr.obstacle.needs.h,
+        curr.obstacle.needs.v,
+        !isInitial,
+      );
       return;
     }
 
@@ -304,12 +328,16 @@ export class EntityManager {
     col: number,
     obstacleId: ObstacleEntity['obstacleId'],
     hp: number,
+    needsH: number,
+    needsV: number,
     animated: boolean,
   ): void {
     const entity = createObstacleEntity({
       obstacleId,
       anchor: { row, col },
       hp,
+      needsH,
+      needsV,
       initialPhase: PHASE.IDLE,
     });
     if (animated) {

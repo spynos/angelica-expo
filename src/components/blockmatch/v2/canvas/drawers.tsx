@@ -66,6 +66,8 @@ const OBS_FILL: Record<ObstacleId, string> = {
 /** Off-white marker color used for stripes / cross / dots. */
 const OBS_MARKER = '#FAF7F2D9'; // cream @ 85% — cohesive with board bg
 const OBS_MARKER_DIM = '#FAF7F299';
+/** Composite "light off" — barely visible against the charcoal fill. */
+const OBS_MARKER_OFF = '#FAF7F226';
 
 /** Two horizontal stripes centered in the tile. */
 function HorizMarker({ size }: { size: number }) {
@@ -132,8 +134,22 @@ function Durable2Marker({ size, hp }: { size: number; hp: number }) {
   );
 }
 
-/** Cross (┼) — composite "needs both H and V" hint. */
-function CompositeMarker({ size }: { size: number }) {
+/**
+ * Cross (┼) — composite "needs both H and V" hint.
+ *
+ * Each arm is a "light": lit (cream) while that direction is still required,
+ * dimmed (near-invisible) once the player has cleared a line in that
+ * direction. needsH / needsV drive the lit state directly.
+ */
+function CompositeMarker({
+  size,
+  needsH,
+  needsV,
+}: {
+  size: number;
+  needsH: number;
+  needsV: number;
+}) {
   const inset = CELL_INSET_PX;
   const w = size - 2 * inset;
   const stroke = Math.max(2, size * 0.07);
@@ -148,7 +164,7 @@ function CompositeMarker({ size }: { size: number }) {
         width={armLen}
         height={stroke}
         r={stroke / 2}
-        color={OBS_MARKER}
+        color={needsH > 0 ? OBS_MARKER : OBS_MARKER_OFF}
       />
       <RoundedRect
         x={cx - stroke / 2}
@@ -156,7 +172,7 @@ function CompositeMarker({ size }: { size: number }) {
         width={stroke}
         height={armLen}
         r={stroke / 2}
-        color={OBS_MARKER}
+        color={needsV > 0 ? OBS_MARKER : OBS_MARKER_OFF}
       />
     </Group>
   );
@@ -166,10 +182,14 @@ export function ObstacleShape({
   size,
   obstacleId,
   hp,
+  needsH,
+  needsV,
 }: {
   size: number;
   obstacleId: ObstacleId;
   hp: number;
+  needsH: number;
+  needsV: number;
 }) {
   const fill = OBS_FILL[obstacleId];
 
@@ -177,7 +197,8 @@ export function ObstacleShape({
   if (obstacleId === 'horiz') marker = <HorizMarker size={size} />;
   else if (obstacleId === 'vert') marker = <VertMarker size={size} />;
   else if (obstacleId === 'durable2') marker = <Durable2Marker size={size} hp={hp} />;
-  else if (obstacleId === 'composite') marker = <CompositeMarker size={size} />;
+  else if (obstacleId === 'composite')
+    marker = <CompositeMarker size={size} needsH={needsH} needsV={needsV} />;
   // basic: no marker — just the charcoal tile.
 
   return (

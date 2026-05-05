@@ -9,6 +9,16 @@
 
 ### Changed
 
+- 블록매치 **composite(합성) 장애물**의 십자(┼) 마커가 남은 제거 조건을
+  팔별로 시각화하도록 변경했습니다. 초기 상태에서는 가로·세로 팔이 모두
+  켜져 있고(크림 색), 가로 라인을 한 번 클리어하면 가로 팔만 꺼지고 세로
+  팔은 그대로 켜진 채로 남아 "이제 세로 한 번만 더" 라는 상태를 한눈에
+  읽을 수 있습니다. 이를 위해 `ObstacleEntity`에 `needsH`/`needsV`
+  SharedValue를 추가하고 `EntityManager`가 cell의 `needs.h/v` 변화를 hp와
+  같은 reconcile 경로에서 동기화하도록 했습니다. 변경 파일:
+  `src/components/blockmatch/v2/engine/{types,entityFactory,entityManager}.ts`,
+  `src/components/blockmatch/v2/canvas/{EntityNode,drawers}.tsx`.
+
 - 블록매치 게임 화면(점수 패널 + 보드 + 트레이)을 세로 중앙으로 정렬했습니다.
   기존에는 root가 단순 `flex: 1` + `playArea`가 `flex: 1`로 남은 공간을 모두
   차지해 그룹이 화면 상단에 쏠리고 트레이 아래로 큰 빈 공간이 생겼습니다.

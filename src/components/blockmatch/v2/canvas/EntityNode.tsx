@@ -75,11 +75,16 @@ function ObstacleEntityNode({
   entity: ObstacleEntity;
   cellSize: number;
 }) {
-  // HP drives the durable2 marker variant. Mirror it into React state so the
-  // shape re-renders on damage. Opacity/transform stay SharedValue-bound.
+  // HP drives the durable2 marker variant; needsH/needsV drive the composite
+  // cross-arm lights. Mirror into React state so the shape re-renders on
+  // damage. Opacity/transform stay SharedValue-bound.
   const [hp, setHp] = useState(entity.hp.value);
+  const [needsH, setNeedsH] = useState(entity.needsH.value);
+  const [needsV, setNeedsV] = useState(entity.needsV.value);
   useEffect(() => {
     if (entity.hp.value !== hp) setHp(entity.hp.value);
+    if (entity.needsH.value !== needsH) setNeedsH(entity.needsH.value);
+    if (entity.needsV.value !== needsV) setNeedsV(entity.needsV.value);
   });
 
   const transform = useDerivedValue(() => {
@@ -97,7 +102,13 @@ function ObstacleEntityNode({
 
   return (
     <Group transform={transform} opacity={entity.transform.opacity}>
-      <ObstacleShape size={cellSize} obstacleId={entity.obstacleId} hp={hp} />
+      <ObstacleShape
+        size={cellSize}
+        obstacleId={entity.obstacleId}
+        hp={hp}
+        needsH={needsH}
+        needsV={needsV}
+      />
     </Group>
   );
 }

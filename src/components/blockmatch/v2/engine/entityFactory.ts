@@ -89,6 +89,8 @@ export function createObstacleEntity(params: {
   obstacleId: ObstacleId;
   anchor: CellPos;
   hp: number;
+  needsH: number;
+  needsV: number;
   initialPhase?: Phase;
 }): ObstacleEntity {
   return {
@@ -97,6 +99,8 @@ export function createObstacleEntity(params: {
     obstacleId: params.obstacleId,
     anchor: params.anchor,
     hp: makeMutable(params.hp),
+    needsH: makeMutable(params.needsH),
+    needsV: makeMutable(params.needsV),
     phase: makeMutable<Phase>(params.initialPhase ?? PHASE.IDLE),
     transform: makeTransform({}),
     createdAt: nextTick(),

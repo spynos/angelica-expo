@@ -88,6 +88,13 @@ export type ObstacleEntity = EntityBase & {
   obstacleId: ObstacleId;
   /** Current HP as a SharedValue so the drawer can cross-fade armor↔cracked. */
   hp: SharedValue<number>;
+  /**
+   * Remaining horizontal hits required (composite only — 1 until that arm is
+   * cleared, then 0). Other obstacle types stay at 0; the drawer ignores them.
+   */
+  needsH: SharedValue<number>;
+  /** Remaining vertical hits required (composite only). */
+  needsV: SharedValue<number>;
   anchor: CellPos;
 };
 
