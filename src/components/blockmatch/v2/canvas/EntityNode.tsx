@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Group } from '@shopify/react-native-skia';
-import { useDerivedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useDerivedValue } from 'react-native-reanimated';
 
 import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 
@@ -76,16 +76,30 @@ function ObstacleEntityNode({
   cellSize: number;
 }) {
   // HP drives the durable2 marker variant; needsH/needsV drive the composite
-  // cross-arm lights. Mirror into React state so the shape re-renders on
-  // damage. Opacity/transform stay SharedValue-bound.
+  // cross-arm lights. Mirror SharedValue → React state via animated reactions
+  // so the marker re-renders the moment the engine writes a new value.
+  // Opacity/transform stay SharedValue-bound.
   const [hp, setHp] = useState(entity.hp.value);
   const [needsH, setNeedsH] = useState(entity.needsH.value);
   const [needsV, setNeedsV] = useState(entity.needsV.value);
-  useEffect(() => {
-    if (entity.hp.value !== hp) setHp(entity.hp.value);
-    if (entity.needsH.value !== needsH) setNeedsH(entity.needsH.value);
-    if (entity.needsV.value !== needsV) setNeedsV(entity.needsV.value);
-  });
+  useAnimatedReaction(
+    () => entity.hp.value,
+    (next, prev) => {
+      if (next !== prev) runOnJS(setHp)(next);
+    },
+  );
+  useAnimatedReaction(
+    () => entity.needsH.value,
+    (next, prev) => {
+      if (next !== prev) runOnJS(setNeedsH)(next);
+    },
+  );
+  useAnimatedReaction(
+    () => entity.needsV.value,
+    (next, prev) => {
+      if (next !== prev) runOnJS(setNeedsV)(next);
+    },
+  );
 
   const transform = useDerivedValue(() => {
     const cx = entity.anchor.col * cellSize + cellSize / 2;

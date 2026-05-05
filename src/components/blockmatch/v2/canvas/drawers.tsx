@@ -63,74 +63,126 @@ const OBS_FILL: Record<ObstacleId, string> = {
   composite: '#5A554D', // charcoal — type signaled by cross marker
 };
 
-/** Off-white marker color used for stripes / cross / dots. */
+/** Off-white marker color used for arrows / cross / dots. */
 const OBS_MARKER = '#FAF7F2D9'; // cream @ 85% — cohesive with board bg
-const OBS_MARKER_DIM = '#FAF7F299';
 /** Composite "light off" — barely visible against the charcoal fill. */
 const OBS_MARKER_OFF = '#FAF7F226';
 
-/** Two horizontal stripes centered in the tile. */
+/**
+ * Build a left-right / up-down arrow as a Skia Path.
+ * - One straight line through the center
+ * - Chevron heads at each end pointing outward
+ * `axis` chooses horizontal (←—→) vs vertical (↑—↓).
+ */
+function makeArrowPath(size: number, axis: 'h' | 'v') {
+  const inset = CELL_INSET_PX;
+  const span = size - 2 * inset;
+  const c = size / 2;
+  // Endpoint offset from edge — leave a little padding so the chevron tip
+  // doesn't touch the rounded-rect border.
+  const endPad = span * 0.18;
+  const a = inset + endPad; // start coord along axis
+  const b = inset + span - endPad; // end coord along axis
+  // Chevron geometry: how far the head extends back from the tip,
+  // and how far it spreads perpendicular to the axis.
+  const chev = span * 0.16;
+
+  const p = Skia.Path.Make();
+  if (axis === 'h') {
+    p.moveTo(a, c);
+    p.lineTo(b, c);
+    // Left head
+    p.moveTo(a + chev, c - chev);
+    p.lineTo(a, c);
+    p.lineTo(a + chev, c + chev);
+    // Right head
+    p.moveTo(b - chev, c - chev);
+    p.lineTo(b, c);
+    p.lineTo(b - chev, c + chev);
+  } else {
+    p.moveTo(c, a);
+    p.lineTo(c, b);
+    // Top head
+    p.moveTo(c - chev, a + chev);
+    p.lineTo(c, a);
+    p.lineTo(c + chev, a + chev);
+    // Bottom head
+    p.moveTo(c - chev, b - chev);
+    p.lineTo(c, b);
+    p.lineTo(c + chev, b - chev);
+  }
+  return p;
+}
+
+/** Single horizontal arrow (←—→) centered in the tile. */
 function HorizMarker({ size }: { size: number }) {
-  const inset = CELL_INSET_PX;
-  const w = size - 2 * inset;
-  const stripeH = Math.max(2, size * 0.07);
-  const cy = size / 2;
-  const gap = size * 0.13;
-  const y1 = cy - gap - stripeH / 2;
-  const y2 = cy + gap - stripeH / 2;
-  const x = inset + w * 0.18;
-  const stripeW = w * 0.64;
+  const path = useMemo(() => makeArrowPath(size, 'h'), [size]);
+  const stroke = Math.max(2, size * 0.07);
   return (
-    <Group>
-      <RoundedRect x={x} y={y1} width={stripeW} height={stripeH} r={stripeH / 2} color={OBS_MARKER} />
-      <RoundedRect x={x} y={y2} width={stripeW} height={stripeH} r={stripeH / 2} color={OBS_MARKER} />
-    </Group>
+    <Path
+      path={path}
+      color={OBS_MARKER}
+      style="stroke"
+      strokeWidth={stroke}
+      strokeCap="round"
+      strokeJoin="round"
+    />
   );
 }
 
-/** Two vertical stripes centered in the tile. */
+/** Single vertical arrow (↑—↓) centered in the tile. */
 function VertMarker({ size }: { size: number }) {
-  const inset = CELL_INSET_PX;
-  const h = size - 2 * inset;
-  const stripeW = Math.max(2, size * 0.07);
-  const cx = size / 2;
-  const gap = size * 0.13;
-  const x1 = cx - gap - stripeW / 2;
-  const x2 = cx + gap - stripeW / 2;
-  const y = inset + h * 0.18;
-  const stripeH = h * 0.64;
+  const path = useMemo(() => makeArrowPath(size, 'v'), [size]);
+  const stroke = Math.max(2, size * 0.07);
   return (
-    <Group>
-      <RoundedRect x={x1} y={y} width={stripeW} height={stripeH} r={stripeW / 2} color={OBS_MARKER} />
-      <RoundedRect x={x2} y={y} width={stripeW} height={stripeH} r={stripeW / 2} color={OBS_MARKER} />
-    </Group>
+    <Path
+      path={path}
+      color={OBS_MARKER}
+      style="stroke"
+      strokeWidth={stroke}
+      strokeCap="round"
+      strokeJoin="round"
+    />
   );
 }
 
-/** Two stacked dots — readable "2 hits remaining". When hp=1 only one dot. */
+/** Stacked dots — readable "hits remaining". hp=2 → two dots, hp=1 → one centered dot. */
 function Durable2Marker({ size, hp }: { size: number; hp: number }) {
   const cx = size / 2;
+  const cy = size / 2;
   const r = size * 0.07;
   const gap = size * 0.13;
+  if (hp >= 2) {
+    return (
+      <Group>
+        <RoundedRect
+          x={cx - r}
+          y={cy - gap - r}
+          width={r * 2}
+          height={r * 2}
+          r={r}
+          color={OBS_MARKER}
+        />
+        <RoundedRect
+          x={cx - r}
+          y={cy + gap - r}
+          width={r * 2}
+          height={r * 2}
+          r={r}
+          color={OBS_MARKER}
+        />
+      </Group>
+    );
+  }
   return (
-    <Group>
-      <RoundedRect
-        x={cx - r}
-        y={cx - gap - r}
-        width={r * 2}
-        height={r * 2}
-        r={r}
-        color={OBS_MARKER}
-      />
-      <RoundedRect
-        x={cx - r}
-        y={cx + gap - r}
-        width={r * 2}
-        height={r * 2}
-        r={r}
-        color={hp >= 2 ? OBS_MARKER : OBS_MARKER_DIM}
-      />
-    </Group>
+    <RoundedRect
+      x={cx - r}
+      y={cy - r}
+      width={r * 2}
+      height={r * 2}
+      r={r}
+      color={OBS_MARKER}
+    />
   );
 }
 
@@ -150,29 +202,26 @@ function CompositeMarker({
   needsH: number;
   needsV: number;
 }) {
-  const inset = CELL_INSET_PX;
-  const w = size - 2 * inset;
+  const hPath = useMemo(() => makeArrowPath(size, 'h'), [size]);
+  const vPath = useMemo(() => makeArrowPath(size, 'v'), [size]);
   const stroke = Math.max(2, size * 0.07);
-  const cx = size / 2;
-  const cy = size / 2;
-  const armLen = w * 0.56;
   return (
     <Group>
-      <RoundedRect
-        x={cx - armLen / 2}
-        y={cy - stroke / 2}
-        width={armLen}
-        height={stroke}
-        r={stroke / 2}
+      <Path
+        path={hPath}
         color={needsH > 0 ? OBS_MARKER : OBS_MARKER_OFF}
+        style="stroke"
+        strokeWidth={stroke}
+        strokeCap="round"
+        strokeJoin="round"
       />
-      <RoundedRect
-        x={cx - stroke / 2}
-        y={cy - armLen / 2}
-        width={stroke}
-        height={armLen}
-        r={stroke / 2}
+      <Path
+        path={vPath}
         color={needsV > 0 ? OBS_MARKER : OBS_MARKER_OFF}
+        style="stroke"
+        strokeWidth={stroke}
+        strokeCap="round"
+        strokeJoin="round"
       />
     </Group>
   );

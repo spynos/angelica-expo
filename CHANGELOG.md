@@ -38,6 +38,20 @@
 
 ### Changed
 
+- 블록매치 **장애물 마커를 화살표 모티브로 리디자인**했습니다. 가로 전용
+  장애물(`fragileH`)은 좌우 화살표(←—→), 세로 전용(`fragileV`)은 상하
+  화살표(↑—↓), 가로/세로 모두 필요한 합성 장애물(`composite`)은 두 화살표를
+  교차시키고 만족된 축은 마커가 꺼지는 식으로 표시합니다. 기존 두 줄 막대
+  표현이 "어느 방향이 필요한지" 신호로 약했던 점을 보완 — 화살표 끝의 chevron
+  머리가 곧장 방향을 가리킵니다. 마커 path는 `Skia.Path.Make()`로 생성한 뒤
+  `strokeCap='round'` / `strokeJoin='round'`로 그려 cream(#FAF7F2D9) 위에서
+  부드럽게 읽힙니다. `Durable2Marker`도 hp=2일 때 두 점, hp=1일 때 가운데
+  한 점으로 단순화해 hp 신호를 더 명확하게 했습니다. 함께 `EntityNode`의
+  obstacle SharedValue 미러링을 매 렌더 실행되던 dependency-less `useEffect`
+  대신 `useAnimatedReaction`으로 교체해, hp/needsH/needsV가 바뀌는 정확한
+  순간에만 `setState`가 일어나도록 했습니다. 변경 파일:
+  `src/components/blockmatch/v2/canvas/{drawers,EntityNode}.tsx`.
+
 - 블록매치 **효과음·햅틱 트리거를 wiring 완료**해 베타 직전 단계로 끌어올렸습니다.
   드래그 시작(피스 선택), ghost가 새 유효 셀로 스냅될 때, 게임 화면 진입,
   그리고 헤더·게임오버 다시하기 버튼 클릭에 각각 SoundService/HapticService
