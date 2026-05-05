@@ -15,6 +15,14 @@ import * as Haptics from 'expo-haptics';
 
 let enabled = true;
 
+// Throttle for `dragSnap` — the gesture worklet may emit a snap-anchor
+// transition multiple times per frame as the finger crosses cell borders,
+// and Light haptics queued back-to-back feel like a continuous buzz on iOS
+// instead of discrete taps. 50ms gates the rate without blunting the
+// per-cell tactile feedback users actually want.
+const DRAG_SNAP_THROTTLE_MS = 50;
+let lastDragSnapAt = 0;
+
 export const HapticService = {
   setEnabled(v: boolean) {
     enabled = v;
@@ -24,9 +32,12 @@ export const HapticService = {
     return enabled;
   },
 
-  /** Tiny nudge — used for drag ghost snap transitions. */
+  /** Tiny nudge — used for drag ghost snap transitions (throttled). */
   dragSnap() {
     if (!enabled) return;
+    const now = Date.now();
+    if (now - lastDragSnapAt < DRAG_SNAP_THROTTLE_MS) return;
+    lastDragSnapAt = now;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   },
 

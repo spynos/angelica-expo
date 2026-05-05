@@ -9,6 +9,25 @@
 
 ### Changed
 
+- 블록매치 **효과음·햅틱 트리거를 wiring 완료**해 베타 직전 단계로 끌어올렸습니다.
+  드래그 시작(피스 선택), ghost가 새 유효 셀로 스냅될 때, 게임 화면 진입,
+  그리고 헤더·게임오버 다시하기 버튼 클릭에 각각 SoundService/HapticService
+  이벤트를 연결했습니다. 스냅 햅틱은 워클릿이 셀 경계를 넘을 때 같은 프레임에
+  여러 번 발화하는 것을 막기 위해 50ms 스로틀을 `HapticService.dragSnap`
+  내부에 두었고, 워클릿 측에서는 *이전 anchor와 다른 유효 anchor*에 도달한
+  경우에만 `runOnJS(onSnap)`을 호출해 정지 프레임에서는 발화하지 않도록
+  했습니다. 효과음 자산은 아직 미준비 상태라 `SoundService.play()`는 dev에서
+  `console.log('[sfx]', file)`만 찍는 stub으로 두고, expo-audio 백엔드는 자산
+  도착 시 한 파일만 교체하면 되도록 호출 사이트는 그대로 둡니다. 또한
+  사운드/햅틱 on·off를 MMKV(`blockmatch.feedback`)에 영속화하는
+  `feedbackSettings` 모듈을 추가하고 `app/_layout.tsx` 부트에서 1회
+  `applyFeedbackSettingsAtBoot()`로 두 서비스에 적용합니다(설정 UI는 추후
+  프로필 패스에서 노출). 변경 파일:
+  `src/components/blockmatch/v2/feedback/{haptic,sound,feedbackSettings}.ts`,
+  `src/components/blockmatch/v2/gesture/useBoardGestures.ts`,
+  `src/components/blockmatch/v2/BlockMatchGameV2.tsx`,
+  `app/_layout.tsx`, `app/(tabs)/puzzle/blockmatch.tsx`.
+
 - 블록매치 블록 색을 **사이즈 안에서도 톤온톤으로 분기**시켜 같은 사이즈
   내 서로 다른 모양들이 시각적으로 구분되도록 했습니다. base hue·채도는
   유지하고 명도만 모양 인덱스에 따라 사다리식으로 분포(L spread:

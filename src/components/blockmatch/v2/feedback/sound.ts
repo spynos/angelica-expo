@@ -37,10 +37,12 @@ const SFX = {
   combo: ['', 'good', 'great', 'excellent', 'amazing'] as const,
 };
 
-// Stub: logs in dev, does nothing in prod. Swap once we commit to a backend.
+// Stub: logs in dev for wiring verification, does nothing in prod. Swap
+// once we commit to a backend (expo-audio) — the call-site layer above
+// doesn't change.
 function play(_file: string) {
   if (!enabled) return;
-  // if (__DEV__) console.log('[sfx]', _file);
+  if (__DEV__) console.log('[sfx]', _file);
 }
 
 export const SoundService = {

@@ -21,9 +21,14 @@ import {
 
 import { AppSplash } from '@/components/app-splash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { applyFeedbackSettingsAtBoot } from '@/src/components/blockmatch/v2/feedback/feedbackSettings';
 import { useAuthBootstrap, type AuthBootstrapStatus } from '@/src/store/auth';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Push persisted sound/haptic on/off into the feedback services before any
+// game code can call them. Synchronous (MMKV) so it's safe at module load.
+applyFeedbackSettingsAtBoot();
 
 if (Platform.OS === 'android') {
   NavigationBar.setVisibilityAsync('hidden');

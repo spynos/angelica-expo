@@ -60,6 +60,13 @@ export function useBoardGestures(params: {
   trayRect: SharedValue<TrayRect>;
   onPlace: (row: number, col: number) => void;
   onRotate: () => void;
+  /** Fires once each time the drag activates from the tray. */
+  onDragStart?: () => void;
+  /**
+   * Fires when the ghost transitions to a *new valid* snap anchor. Throttling
+   * is the consumer's responsibility (see HapticService.dragSnap).
+   */
+  onSnap?: () => void;
   inputEnabled: boolean;
 }) {
   const {
@@ -72,6 +79,8 @@ export function useBoardGestures(params: {
     trayRect,
     onPlace,
     onRotate,
+    onDragStart,
+    onSnap,
     inputEnabled,
   } = params;
 
@@ -251,6 +260,7 @@ export function useBoardGestures(params: {
       isDragging.value = true;
       dragOpacitySV.value = withTiming(1, { duration: 120 });
       dragScaleSV.value = 1;
+      if (onDragStart) runOnJS(onDragStart)();
     })
     .onUpdate((e) => {
       'worklet';
@@ -290,6 +300,9 @@ export function useBoardGestures(params: {
         return;
       }
 
+      const prevAnchor = ghostAnchorSV.value;
+      const prevValid = ghostValidSV.value;
+
       const result = ghostSnap(
         boardLocalAnchorX,
         boardLocalAnchorY,
@@ -298,14 +311,28 @@ export function useBoardGestures(params: {
         boardBits.value,
         boardCols,
         boardRows,
-        ghostAnchorSV.value,
-        ghostValidSV.value,
+        prevAnchor,
+        prevValid,
       );
 
       ghostAnchorSV.value = result.anchor;
       ghostValidSV.value = result.valid;
       // Fade ghost in/out by result.show. Worklet-side `withTiming` ok.
       ghostOpacitySV.value = result.show ? 1 : 0;
+
+      // Fire onSnap when the ghost newly arrives at a valid cell — either
+      // becoming valid for the first time, or moving to a different valid
+      // cell. Invalid→invalid and stationary frames are skipped so the
+      // haptic feels per-cell rather than continuous.
+      if (
+        onSnap &&
+        result.valid &&
+        (!prevValid ||
+          result.anchor.row !== prevAnchor.row ||
+          result.anchor.col !== prevAnchor.col)
+      ) {
+        runOnJS(onSnap)();
+      }
     })
     .onEnd(() => {
       'worklet';

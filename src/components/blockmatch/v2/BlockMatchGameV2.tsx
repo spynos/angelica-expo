@@ -60,6 +60,7 @@ export function BlockMatchGameV2() {
 
   useEffect(() => {
     start();
+    SoundService.playGameStart();
     return () => finalize();
   }, [start, finalize]);
 
@@ -282,6 +283,8 @@ export function BlockMatchGameV2() {
     trayRect,
     onPlace: handlePlace,
     onRotate: handleRotate,
+    onDragStart: SoundService.playSelect,
+    onSnap: HapticService.dragSnap,
     inputEnabled,
   });
 
