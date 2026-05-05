@@ -243,7 +243,15 @@ export function useBoardGestures(params: {
         return;
       }
       didExceedTap.value = false;
-      // Reset clearing opacity so a fresh drag isn't stuck at 0 from a prior clear.
+      // Fully wipe stale ghost state from the previous drop. Necessary because
+      // when the next piece has the same defId+rotationIdx, useMemo reuses the
+      // same ghost entity (no React remount) and its landed/anchor/valid still
+      // point at the prior placement cell — visible as a solid-block flash on
+      // drag start when that cell was just cleared by a line.
+      ghostLandedSV.value = false;
+      ghostAnchorSV.value = { row: -1, col: -1 };
+      ghostValidSV.value = false;
+      ghostOpacitySV.value = 0;
       ghostClearingOpacitySV.value = 1;
       // Pre-position the drag piece at the finger (invisible) so the first
       // frame after activation isn't jumpy.

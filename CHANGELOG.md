@@ -9,6 +9,20 @@
 
 ### Fixed
 
+- 블록매치 **라인 클리어 직후 같은 모양의 다음 piece를 드래그할 때 직전
+  배치칸에서 솔리드 블록이 깜빡 등장하던 버그**를 수정했습니다. 원인은
+  `useBoardGestures`의 ghost/drag entity가 `defId:rotationIdx`만으로 키잉돼
+  있어, 다음 piece가 같은 모양/회전이면 `useMemo`가 직전과 동일한 ghost
+  entity를 재사용 — `landed=true` / `anchor=직전 배치칸` / `valid=true` 상태가
+  그대로 살아남는 것이었습니다. 라인 클리어가 없을 때는 같은 칸에 placed
+  BlockEntity가 같은 색으로 남아있어 stale ghost와 겹쳐 보이지 않지만, 라인
+  클리어로 그 칸의 BlockEntity가 제거된 상황에서 다음 드래그 `onBegin`이
+  `clearingOpacity`만 1로 리셋하면 stale ghost가 솔리드 블록 형태로 노출됐고
+  `onUpdate`가 anchor를 덮어쓸 때까지 한 프레임 깜빡였습니다. 새 드래그가
+  시작되는 순간 `landed`/`anchor`/`valid`/`opacity`까지 함께 wipe하도록
+  변경했습니다. 변경 파일:
+  `src/components/blockmatch/v2/gesture/useBoardGestures.ts`.
+
 - 블록매치 **라인 클리어 stagger가 가로 라인에서 작동하지 않던 버그**를
   수정했습니다. 기존 `EntityManager.syncFromState`는 사라지는 셀들을 row
   index에만 의존해 stagger했기 때문에, 세로 라인 클리어는 위→아래 cascade가
