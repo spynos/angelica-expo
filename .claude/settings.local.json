@@ -1,6 +1,12 @@
 {
   "permissions": {
     "allow": [
+      "Bash(npx eas-cli:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(/opt/homebrew/bin/node --version)",
+      "Bash(/opt/homebrew/bin/npm --version)",
+      "Bash(eas build:list --limit 5 --non-interactive)",
       "Bash(npx expo *)",
       "Bash(kill %1)",
       "Bash(npm run *)",
@@ -54,7 +60,21 @@
       "Bash(npm ls *)",
       "Bash(eas build:view 7515166d-db15-4a81-bdf9-5d764f8bb93d --json)",
       "Bash(npm config *)",
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "Bash(git -C /Users/blue/Documents/GitHub/angelica-expo show --stat 9f4511301388e5dc1b1a1f41ef6da4a4c56266c6)",
+      "Bash(git stash *)",
+      "Bash(git -C /Users/blue/Documents/GitHub/angelica-expo switch feat/blockmatch-upgrade-2)",
+      "Bash(git -C /Users/blue/Documents/GitHub/angelica-expo stash push -m \"settings-local-on-switch-$\\(date +%s\\)\" -- .claude/settings.local.json)",
+      "Bash(git switch *)",
+      "Bash(JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" npx tsc --noEmit)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell input keyevent 82)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell \"am broadcast -a com.facebook.react.RELOAD_RN_VIEW\")",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell input text RR)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell input keyevent KEYCODE_R)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell screencap -p /sdcard/blockmatch.png)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb -s emulator-5554 pull /sdcard/blockmatch.png /tmp/blockmatch.png)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb *)",
+      "Bash(git *)"
     ]
   }
 }
