@@ -1,33 +1,28 @@
 import { useMemo } from 'react';
-import {
-  Blur,
-  Group,
-  Path,
-  Skia,
-} from '@shopify/react-native-skia';
+import { Blur, Group, Path, Skia } from '@shopify/react-native-skia';
 import { useDerivedValue } from 'react-native-reanimated';
 
-import {
-  bevelColorsForPieceId,
-  colorForPieceId,
-} from '@/src/lib/blockmatch/colors';
+import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import type { Offset } from '@/src/lib/blockmatch/types';
 
-import { DEFAULT_BEVEL_FRACTION, GHOST_BEVEL_FRACTION } from '../engine/constants';
+import { CELL_INSET_PX, CELL_RADIUS_RATIO } from '../engine/constants';
 import type { GhostEntity } from '../engine/types';
-import { BeveledBlockShape } from './drawers';
+import { FlatBlockShape } from './drawers';
 
 /**
- * Ghost snap preview.
+ * Ghost snap preview (flat-paint era).
  *
- * Renders the dragging piece at the current snap anchor with a soft outer
- * glow and a full-opacity outline (penta's 2-layer glow + main stroke).
- * Visibility is SharedValue-driven: when `anchor` is (-1, -1) the entire
- * group fades to 0 opacity.
+ * The two visual states:
+ *   - "ghost": low-opacity tile fills + a soft outer glow that traces the
+ *     piece's outline. Shown while the snap anchor is valid and the piece
+ *     hasn't landed yet.
+ *   - "solid": full-opacity tiles, identical to the settled BlockEntityNode.
+ *     Shown the moment the gesture commits.
  *
- * The outline path is a union of all cell edges in the shape. It's cheap
- * to precompute at the JS layer since shape + cellSize are both stable
- * per drag session.
+ * Rotation: with bevels gone the cells have no orientation, so a single
+ * outer rotate would be enough — but the GhostEntity stores `shape` as
+ * already-rotated offsets, so we just render each cell at its offset.
+ * No counter-rotation needed.
  */
 
 export function GhostNode({
@@ -38,18 +33,25 @@ export function GhostNode({
   cellSize: number;
 }) {
   const shape = entity.shape;
-  const colors = bevelColorsForPieceId(entity.pieceId);
-  const glowColor = colorForPieceId(entity.pieceId);
+  const fill = colorForPieceId(entity.pieceId);
 
-  // Outline path (combined cell perimeters). One SkPath per draw; cached.
+  // Outline path: rounded-rect perimeter for each cell, unioned. Used for the
+  // soft outer glow. Cached per (shape, cellSize).
   const outlinePath = useMemo(() => {
+    const inset = CELL_INSET_PX;
+    const radius = cellSize * CELL_RADIUS_RATIO;
+    const dim = cellSize - 2 * inset;
     const p = Skia.Path.Make();
     for (const [r, c] of shape) {
-      p.addRect({
-        x: c * cellSize,
-        y: r * cellSize,
-        width: cellSize,
-        height: cellSize,
+      p.addRRect({
+        rect: {
+          x: c * cellSize + inset,
+          y: r * cellSize + inset,
+          width: dim,
+          height: dim,
+        },
+        rx: radius,
+        ry: radius,
       });
     }
     return p;
@@ -77,23 +79,18 @@ export function GhostNode({
 
   return (
     <Group transform={transform} opacity={opacity}>
-      {/* Ghost look: glow + outline + tinted fills */}
+      {/* Ghost look: soft glow + dimmed tile fills */}
       <Group opacity={ghostLayerOpacity}>
-        <Path path={outlinePath} color={glowColor} style="stroke" strokeWidth={2} opacity={0.4}>
+        <Path path={outlinePath} color={fill} style="stroke" strokeWidth={2} opacity={0.4}>
           <Blur blur={6} />
         </Path>
-        <Path path={outlinePath} color={glowColor} style="stroke" strokeWidth={1.5} />
         {shape.map(([r, c]: Offset, i: number) => (
           <Group
             key={i}
             transform={[{ translateX: c * cellSize }, { translateY: r * cellSize }]}
-            opacity={0.4}
+            opacity={0.45}
           >
-            <BeveledBlockShape
-              size={cellSize}
-              colors={colors}
-              bevelFraction={GHOST_BEVEL_FRACTION}
-            />
+            <FlatBlockShape size={cellSize} fill={fill} />
           </Group>
         ))}
       </Group>
@@ -104,11 +101,7 @@ export function GhostNode({
             key={i}
             transform={[{ translateX: c * cellSize }, { translateY: r * cellSize }]}
           >
-            <BeveledBlockShape
-              size={cellSize}
-              colors={colors}
-              bevelFraction={DEFAULT_BEVEL_FRACTION}
-            />
+            <FlatBlockShape size={cellSize} fill={fill} />
           </Group>
         ))}
       </Group>

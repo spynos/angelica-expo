@@ -1,44 +1,29 @@
 /**
  * Per-piece block color palette.
  *
- * Design:
- * - Each piece *size* (1..5) has a base hue so the player can tell "this is a
- *   tromino / tetromino / …" at a glance. Hues are spaced ≥60° apart on the
- *   wheel and deliberately avoid the obstacle palette (orange ~25°, violet
- *   ~255°) to prevent misreads.
- * - Within a size, every shape gets a subtly different color — lightness
- *   drifts ±L_SPREAD and hue drifts ±H_SPREAD around the base so shapes are
- *   distinguishable without breaking the "same tone family" impression.
- * - Saturation is capped around 22–42% so long play sessions don't fatigue
- *   the eyes.
+ * Flat-paint era (ADR 003):
+ * - Each piece *size* (1..5) has one solid pastel color. Saturation low,
+ *   lightness high so shapes read softly on the cream board (#FAF7F2).
+ * - No within-size hue/lightness variation: every shape of the same size
+ *   uses the same fill. The bevel-color machinery further down still
+ *   computes 4-face shifts but is unused by the v2 renderer; it remains
+ *   only so the v1 dead-code paths still compile.
  */
 import { piecesBySize } from './pieces';
 
 type HSL = { h: number; s: number; l: number };
 
 const BASE: Record<1 | 2 | 3 | 4 | 5, HSL> = {
-  1: { h: 10, s: 78, l: 68 }, // coral peach — monomino
-  2: { h: 42, s: 80, l: 60 }, // honey gold — domino
-  3: { h: 148, s: 52, l: 56 }, // fresh mint — trominoes
-  4: { h: 188, s: 62, l: 52 }, // bright aqua — tetrominoes
-  5: { h: 278, s: 55, l: 64 }, // light lilac — pentominoes (278° sits clear of violet obstacle at ~258°)
+  1: { h: 14, s: 58, l: 78 }, // soft coral — monomino
+  2: { h: 40, s: 55, l: 76 }, // soft butter — domino
+  3: { h: 150, s: 38, l: 72 }, // soft sage — trominoes
+  4: { h: 196, s: 42, l: 76 }, // soft sky — tetrominoes
+  5: { h: 278, s: 35, l: 78 }, // soft lavender — pentominoes
 };
 
-// Per-size variation widths. Sizes with only one shape stay at the base.
-const L_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = {
-  1: 0,
-  2: 0,
-  3: 8,
-  4: 10,
-  5: 11,
-};
-const H_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = {
-  1: 0,
-  2: 0,
-  3: 8,
-  4: 10,
-  5: 10,
-};
+// Variation disabled in flat era — same fill across all shapes of a size.
+const L_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+const H_SPREADS: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
 function hslToHex(h: number, s: number, l: number): string {
   const hh = ((h % 360) + 360) % 360;

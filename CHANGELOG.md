@@ -9,6 +9,24 @@
 
 ### Changed
 
+- 블록매치 보드 페인팅을 **베벨에서 플랫(파스텔 단색)으로 전환**했습니다 (ADR-003).
+  기존 `penta_block_blast` 스타일의 4면 베벨 + 좌상단 하이라이트 + 사이즈
+  내부 색상 spread를 모두 제거하고, 사이즈별 단일 파스텔 색(코랄 / 버터 /
+  세이지 / 스카이 / 라벤더) + 라운드 사각형 한 겹으로 단순화했습니다. 보드
+  배경은 따뜻한 크림(`#FAF7F2`), 빈 칸은 솔리드 채움 대신 hairline 윤곽선
+  (`#E5DCC9`, 0.75px)으로 표현했습니다. 셀 간격은 절대값 2px(`CELL_INSET_PX
+  = 1`)로 좁혀 인접 타일이 자연스럽게 결합돼 보이도록 했고, 점수 패널과
+  피스 트레이 컨테이너의 드롭 섀도우를 제거해 보드 영역과 동일한 평면감을
+  유지하도록 했습니다. 장애물 5종도 베벨/펄스 아이콘을 제거하고 단일 fill
+  + 평면 마커(가로 줄·세로 줄·점 2개·십자)로 재정의했으며, 드래그 중
+  블록만 미세 드롭 섀도우(`dy=2 blur=6 #0000001F`)로 들린 느낌을
+  표현합니다. 변경 파일: `src/lib/blockmatch/colors.ts`,
+  `src/components/blockmatch/v2/canvas/{drawers,EntityNode,GhostNode,DragPieceOverlay,BoardCanvasV2}.tsx`,
+  `src/components/blockmatch/v2/tray/{PiecePreview,PieceTrayV2}.tsx`,
+  `src/components/blockmatch/v2/{ScorePanelV2,engine/constants}.ts(x)`.
+  ADR-001/002(Skia 채택, 단일 Canvas + imperative)는 그대로 유효 — 페인팅
+  정책만 교체.
+
 - Expo SDK 55 호환 패치 버전으로 의존성을 정합화했습니다 (`expo`, `expo-auth-session`,
   `expo-dev-client`, `expo-image`, `expo-linking`, `expo-notifications`, `expo-router`,
   `expo-splash-screen`, `expo-system-ui`, `expo-updates`, `react-native`,

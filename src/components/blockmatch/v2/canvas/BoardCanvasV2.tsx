@@ -1,14 +1,7 @@
 import { Canvas } from '@shopify/react-native-skia';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  Easing,
-  cancelAnimation,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { type SharedValue } from 'react-native-reanimated';
 
 import type { GameState } from '@/src/lib/blockmatch/types';
 import { BOARD_SIZE } from '@/src/lib/blockmatch/types';
@@ -56,21 +49,8 @@ export function BoardCanvasV2({
     onManagerRef.current?.(manager);
   }, [manager]);
 
-  // Shared icon beacon pulse for pulsing obstacle types (basic/horiz/vert/
-  // composite). Matches penta SpecialBlock: 1000ms period, easeInOutSine,
-  // full 0↔1 alpha (controller repeats with reverse=true, half-period
-  // 500ms). Armor bolts and cracks don't subscribe to this.
-  const obstaclePulse = useSharedValue(1);
-  useEffect(() => {
-    obstaclePulse.value = withRepeat(
-      withTiming(0, { duration: 500, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    return () => {
-      cancelAnimation(obstaclePulse);
-    };
-  }, [obstaclePulse]);
+  // Flat-paint era: obstacle icons are static (no pulsing), so no shared
+  // pulse SharedValue is needed.
 
   const boardW = BOARD_SIZE * cellSize;
   const boardH = BOARD_SIZE * cellSize;
@@ -84,12 +64,7 @@ export function BoardCanvasV2({
           cellSize={cellSize}
         />
         {entities.map((e) => (
-          <EntityNode
-            key={e.id}
-            entity={e}
-            cellSize={cellSize}
-            obstaclePulse={obstaclePulse}
-          />
+          <EntityNode key={e.id} entity={e} cellSize={cellSize} />
         ))}
         {ghost && boardBits ? (
           <ClearHintNode

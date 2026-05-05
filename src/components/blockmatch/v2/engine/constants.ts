@@ -34,27 +34,35 @@ export const KEEP_THRESHOLD_SQ = 2.25;
 export const FINGER_Y_OFFSET_PX = 100;
 
 // ---------------------------------------------------------------------------
-// Bevel (shared between color.ts pre-compute and the drawer)
+// Cell geometry (flat-paint era — ADR 003)
 // ---------------------------------------------------------------------------
 
-/** Bevel inset as a fraction of cell size for settled blocks. */
-export const DEFAULT_BEVEL_FRACTION = 0.18;
+/** Inset from the cell edge to the painted block, in absolute pixels.
+ *  Two adjacent cells therefore show a 2 × CELL_INSET_PX gap between fills. */
+export const CELL_INSET_PX = 1;
 
-/** Ghost uses a slightly wider bevel for a softer, lifted look. */
+/** Corner radius of the painted tile, as a fraction of cellSize. */
+export const CELL_RADIUS_RATIO = 0.18;
+
+/** Stroke width (in px) of the empty-cell hairline outline. */
+export const EMPTY_CELL_STROKE_PX = 0.75;
+
+// Legacy bevel fractions retained for v1 dead-code compile compatibility.
+export const DEFAULT_BEVEL_FRACTION = 0.18;
 export const GHOST_BEVEL_FRACTION = 0.2;
 
 // ---------------------------------------------------------------------------
-// Board surface
+// Board surface (flat-paint era)
 // ---------------------------------------------------------------------------
 
-/** Warm espresso board (30% lighter). */
-export const BOARD_BG_COLOR = '#69635F';
+/** Warm cream board background. */
+export const BOARD_BG_COLOR = '#FAF7F2';
 
-/** Light grey grid line. */
-export const BOARD_GRID_COLOR = '#B0A8A0';
+/** Hairline outline color for empty cells (slightly darker cream). */
+export const BOARD_GRID_COLOR = '#E5DCC9';
 
-/** Slightly lighter empty cell tint. */
-export const EMPTY_CELL_TINT = '#6F6763';
+/** Deprecated — kept only so legacy v1 imports still resolve. */
+export const EMPTY_CELL_TINT = BOARD_BG_COLOR;
 
 /** Valid drop target highlight (lime) at 30% alpha. */
 export const VALID_TARGET_COLOR = '#E1FF004C';

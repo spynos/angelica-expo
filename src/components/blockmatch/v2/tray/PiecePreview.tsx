@@ -2,25 +2,18 @@ import { useMemo } from 'react';
 import { Canvas, Group } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 
-import { bevelColorsForPieceId } from '@/src/lib/blockmatch/colors';
+import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import { getPiece } from '@/src/lib/blockmatch/pieces';
 import type { Offset } from '@/src/lib/blockmatch/types';
 
-import { DEFAULT_BEVEL_FRACTION } from '../engine/constants';
-import { BeveledBlockShape } from '../canvas/drawers';
+import { FlatBlockShape } from '../canvas/drawers';
 
 /**
  * Renders a piece shape inside a fixed-size square container.
  *
- * Rotation model — rigid orbit + upright bevel:
- *
- *   1. Outer `<Group transform>` rotates all cells around the container
- *      center so the piece turns as one solid unit (no "blocks rearranging").
- *
- *   2. Each cell has an inner counter-rotation that undoes the outer angle
- *      around the cell's own center. Result: cells orbit the pivot like a
- *      rigid body, but every bevel face stays upright (top bright / bottom
- *      dark) regardless of rotationIdx — matching penta's visual behaviour.
+ * Flat-paint era: with no bevel orientation to preserve, the entire piece
+ * rotates as one rigid body around the container center. No per-cell
+ * counter-rotation is needed.
  */
 
 export function PiecePreview({
@@ -36,16 +29,16 @@ export function PiecePreview({
   /** Animated rotation (used by the current slot, which animates via withTiming). */
   turns?: SharedValue<number>;
   /** Static rotation in turns (0..1). Use for preview slots that snap with no
-   * animation — avoids the JS→UI SharedValue propagation delay that would
-   * otherwise flash the piece at a stale rotation for one frame when defId
-   * changes. Exactly one of `turns` / `staticTurns` should be provided. */
+   *  animation — avoids the JS→UI SharedValue propagation delay that would
+   *  otherwise flash the piece at a stale rotation for one frame when defId
+   *  changes. Exactly one of `turns` / `staticTurns` should be provided. */
   staticTurns?: number;
 }) {
-  const { shape0, colors } = useMemo(() => {
+  const { shape0, fill } = useMemo(() => {
     const def = getPiece(defId);
     return {
       shape0: def.rotations[0],
-      colors: bevelColorsForPieceId(defId),
+      fill: colorForPieceId(defId),
     };
   }, [defId]);
 
@@ -66,7 +59,6 @@ export function PiecePreview({
   }, [shape0, containerCells]);
 
   const centerPx = containerPx / 2;
-  const half = cellSize / 2;
 
   const isStatic = turns === undefined;
   const staticT = staticTurns ?? 0;
@@ -82,19 +74,9 @@ export function PiecePreview({
       { translateY: -centerPx },
     ];
   });
-  const counterTransformSV = useDerivedValue(() => {
-    const t = turns ? turns.value : 0;
-    return [
-      { translateX: half },
-      { translateY: half },
-      { rotate: -t * 2 * Math.PI },
-      { translateX: -half },
-      { translateY: -half },
-    ];
-  });
 
   // Static path: plain JS transforms. Computed inline so defId and rotation
-  // are guaranteed to land in the same commit — no JS→UI propagation delay.
+  // are guaranteed to land in the same commit.
   const outerTransformStatic = [
     { translateX: centerPx },
     { translateY: centerPx },
@@ -102,16 +84,8 @@ export function PiecePreview({
     { translateX: -centerPx },
     { translateY: -centerPx },
   ];
-  const counterTransformStatic = [
-    { translateX: half },
-    { translateY: half },
-    { rotate: -staticT * 2 * Math.PI },
-    { translateX: -half },
-    { translateY: -half },
-  ];
 
   const outerTransform = isStatic ? outerTransformStatic : outerTransformSV;
-  const counterTransform = isStatic ? counterTransformStatic : counterTransformSV;
 
   return (
     <Canvas style={{ width: containerPx, height: containerPx }}>
@@ -124,13 +98,7 @@ export function PiecePreview({
               { translateY: (offsetY + r) * cellSize },
             ]}
           >
-            <Group transform={counterTransform}>
-              <BeveledBlockShape
-                size={cellSize}
-                colors={colors}
-                bevelFraction={DEFAULT_BEVEL_FRACTION}
-              />
-            </Group>
+            <FlatBlockShape size={cellSize} fill={fill} />
           </Group>
         ))}
       </Group>

@@ -7,7 +7,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { Radius, Shadow } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { GameState } from '@/src/lib/blockmatch/types';
 import { DUR_SPAWN } from '../engine/constants';
@@ -146,6 +146,5 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    ...Shadow.sm,
   },
 });

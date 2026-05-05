@@ -1,36 +1,26 @@
-import { Canvas, Group } from '@shopify/react-native-skia';
+import { Canvas, Group, Shadow } from '@shopify/react-native-skia';
 import { useCallback, useMemo, useRef } from 'react';
 import { Dimensions, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useDerivedValue, useSharedValue, type SharedValue } from 'react-native-reanimated';
 
-import { bevelColorsForPieceId } from '@/src/lib/blockmatch/colors';
+import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 import type { Offset } from '@/src/lib/blockmatch/types';
 
-import { DEFAULT_BEVEL_FRACTION } from '../engine/constants';
 import type { DragPieceEntity } from '../engine/types';
-import { BeveledBlockShape } from './drawers';
+import { FlatBlockShape } from './drawers';
 
 /**
  * Full-screen, pointer-transparent overlay that draws the piece being
  * dragged.
  *
- * Rotation model — mirrors PiecePreview exactly:
+ * Flat-paint era: cells are single-fill rounded rects with a slight drop
+ * shadow on the outer group so the piece reads as "lifted" off the board.
  *
- *   - Cells come from `entity.shape0` (rotations[0], canonical unrotated).
- *   - A single outer `<Group transform>` applies `turns * 2π` rotation around
- *     the shape's visual center, so the entire piece — bevels and all —
- *     rotates as one rigid body.
- *   - `turns` is the same SharedValue that drives PieceTrayV2's current
- *     slot, so bevel orientation is pixel-identical at pickup and during drag.
- *
- * Positioning model:
- *
- *   - `entity.transform.x/y` holds the top-left of the current rotation's
- *     bounding box in window-absolute coords. We derive the visual center
- *     from that (+ cellsW/2 * cellSize, + cellsH/2 * cellSize) and rotate
- *     shape0 around that center so the piece stays anchored under the finger.
- *   - The overlay is mounted inside SafeAreaView so its local origin is not
- *     (0,0) in the window. We subtract overlayOriginX/Y via measureInWindow.
+ * Rotation:
+ *   - `entity.shape0` is the canonical (unrotated) shape.
+ *   - The outer Group rotates `turns * 2π` around the shape0 visual center.
+ *   - With bevels gone there's no per-cell counter-rotation — the entire
+ *     piece rotates as one rigid body.
  */
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -94,9 +84,9 @@ function DraggingPiece({
   overlayOriginY: SharedValue<number>;
   turns: SharedValue<number>;
 }) {
-  const colors = bevelColorsForPieceId(entity.pieceId);
+  const fill = colorForPieceId(entity.pieceId);
 
-  // shape0 bbox — used to find the rotation pivot (center of shape0).
+  // shape0 bbox center — pivot for outer rotation.
   const { shape0CenterX, shape0CenterY } = useMemo(() => {
     const rs = entity.shape0.map(([r]) => r);
     const cs = entity.shape0.map(([, c]) => c);
@@ -124,33 +114,19 @@ function DraggingPiece({
     ];
   });
 
-  // Counter-rotation per cell: undo the outer angle around each cell's own
-  // center so bevel faces stay upright (top bright / bottom dark).
-  const half = (cellSize - 2) / 2;
-  const counterTransform = useDerivedValue(() => {
-    return [
-      { translateX: half },
-      { translateY: half },
-      { rotate: -turns.value * 2 * Math.PI },
-      { translateX: -half },
-      { translateY: -half },
-    ];
-  });
-
   return (
     <Group transform={outerTransform} opacity={entity.transform.opacity}>
       {entity.shape0.map(([r, c]: Offset, i: number) => (
         <Group
           key={i}
-          transform={[{ translateX: c * cellSize + 1 }, { translateY: r * cellSize + 1 }]}
+          transform={[{ translateX: c * cellSize }, { translateY: r * cellSize }]}
         >
-          <Group transform={counterTransform}>
-            <BeveledBlockShape
-              size={cellSize - 2}
-              colors={colors}
-              bevelFraction={DEFAULT_BEVEL_FRACTION}
-            />
-          </Group>
+          <FlatBlockShape size={cellSize} fill={fill}>
+            {/* Slight drop shadow — reads as "lifted off the board". Applied
+                per-cell rather than to the outer group so the shadow follows
+                the rounded silhouette of each tile. */}
+            <Shadow dx={0} dy={2} blur={6} color="#0000001F" />
+          </FlatBlockShape>
         </Group>
       ))}
     </Group>

@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
@@ -234,7 +234,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     alignItems: 'center',
-    ...Shadow.sm,
   },
   chipCenter: {
     flex: 1.4,

@@ -229,19 +229,30 @@ turnScore = (lineScore + obstacleBonus) * comboMultiplier
 - 트레이의 현재 블록을 **탭** → 90° 회전 (`rotate` action).
 - 드래그 중 두 번째 손가락 탭 회전은 추후 검토 (MVP 제외).
 
-### 5.5 시각 디자인 토큰
-- 플레이어 블록: 사이즈별(1~5칸) HSL 팔레트 — `src/lib/blockmatch/colors.ts` 의 `BASE` 정의 + per-shape variation. 각 셀은 4면 베벨(top +15 / left +6 / right −15 / bottom −30) + top-left 하이라이트 페인팅 (penta_block_blast `beveled_block.dart` 채용).
-- 렌더 엔진: **`@shopify/react-native-skia` 명령형 모드**. 게임 플레이 영역 전체를 **단일 `<Canvas>`** 한 개 native view로 그림. `useDerivedValue` worklet이 `Skia.PictureRecorder`로 imperative draw → `<Picture>` 교체로 React 개입 없이 시각 갱신. 도입 배경: `docs/adr/001-skia-for-blockmatch.md` (Skia 도입) + `docs/adr/002-single-canvas-imperative.md` (단일 Canvas + imperative 전환).
-- 깜빡임 케이스(드래그 시작, 배치, 복귀, 미리보기 교체)는 모든 시각 업데이트가 한 worklet pass에서 끝나므로 구조적으로 발생하지 않는다.
-- 보드 배경: `Palette.boardWarm.background` (`#FAF7F2`). 다크모드에서도 항상 웜 라이트 톤 고정.
-- 빈 칸: `Palette.boardWarm.emptyTint` (`#F0E9DA`) — 보드 배경보다 살짝 어두운 tint 로 그리드감 형성.
-- 그리드라인: `Palette.boardWarm.gridLine` (`#E5DCC9`) — 명시적 보더 대신 보드 vs emptyTint 색차로 구현. 추후 hairline 보더 추가 여지.
-- 장애물 색상 (M3 확정 전 가안):
-  - basic   → 진한 회색 `#5A554D`
-  - horiz   → `#C8773A` (오렌지) + 가로 줄무늬
-  - vert    → `#5C4A8F` (퍼플) + 세로 줄무늬
-  - durable → `#A05E28` + 작은 숫자 `2`
-- 장애물 셀은 이번 라운드에서 베벨 미적용 (별도 시각 언어 유지).
+### 5.5 시각 디자인 토큰 (ADR-003 — 플랫 페인팅)
+- 플레이어 블록: 사이즈별 단일 파스텔 1색 (`src/lib/blockmatch/colors.ts` `BASE`).
+  사이즈 내부 H/L spread = 0 (모든 모양이 같은 색). 베벨/하이라이트는 사용하지
+  않으며, 각 셀은 라운드 사각형 한 겹 단일 fill (`FlatBlockShape`).
+- 1차 시안 HSL: 1=hsl(14,58%,78%) coral / 2=hsl(40,55%,76%) butter /
+  3=hsl(150,38%,72%) sage / 4=hsl(196,42%,76%) sky / 5=hsl(278,35%,78%) lavender.
+  값은 시뮬레이터 시각 검토 후 튠.
+- 렌더 엔진: **`@shopify/react-native-skia` 명령형 모드**. 게임 플레이 영역
+  전체를 **단일 `<Canvas>`** 한 개 native view로 그림. ADR-001(Skia 도입) +
+  ADR-002(단일 Canvas) + ADR-003(플랫 페인팅) 참고.
+- 셀 분리감: `CELL_INSET_RATIO = 0.08`로 각 타일이 보드 배경 위에 떠 있는
+  것처럼 그려짐. 셀 라운딩: `CELL_RADIUS_RATIO = 0.18`.
+- 보드 배경: `BOARD_BG_COLOR = #FAF7F2` (따뜻한 크림). 다크모드에서도 고정.
+- 빈 칸: 솔리드 fill 없음. 보드 배경 위에 hairline stroke만
+  (`BOARD_GRID_COLOR = #E5DCC9`, `EMPTY_CELL_STROKE_PX = 0.75`).
+- 장애물 (플랫 + 5종 구분):
+  - basic = `#5A554D` 차콜 (마커 X)
+  - horiz = `#C8773A` 머스타드 + 가로 줄무늬 2줄
+  - vert = `#7A6BA3` 더스티 퍼플 + 세로 줄무늬 2줄
+  - durable2 = `#8E6A3A` 브론즈 + 점 2개 (hp=1이면 두 번째 점이 흐려짐)
+  - composite = `#5A554D` 차콜 + 십자(┼)
+  - 마커는 `#FAF7F2D9` 크림 알파(보드 톤과 통일).
+- 드래그 중 블록만 미세 드롭 섀도우(`dy=2 blur=6 color=#0000001F`)로 들린
+  느낌. 그 외 블록·장애물은 그림자 없음.
 
 ### 5.6 애니메이션
 - 라인 클리어: 200ms 페이드+축소.
