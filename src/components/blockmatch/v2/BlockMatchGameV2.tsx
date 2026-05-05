@@ -360,9 +360,14 @@ export function BlockMatchGameV2() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  // Centering the score panel + board + tray group as a single block in the
+  // available vertical space — avoids the top-heavy stacking that left a big
+  // empty area below the tray on tall screens. The DragPieceOverlay is
+  // `position: absolute` so it stays unaffected by this flex change, which
+  // keeps drag positioning identical (boardOrigin / trayRect are remeasured
+  // via measureInWindow on layout).
+  root: { flex: 1, justifyContent: 'center' },
   playArea: {
-    flex: 1,
     alignItems: 'center',
     // Uniform vertical rhythm: score↔board gap comes from the score panel's
     // own paddingBottom (Spacing.md); board↔tray gap matches it via `gap`.
