@@ -1,5 +1,14 @@
-import { Path, Skia } from '@shopify/react-native-skia';
-import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
+import { LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
+import { useEffect } from 'react';
+import {
+  Easing,
+  cancelAnimation,
+  useDerivedValue,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { colorForPieceId } from '@/src/lib/blockmatch/colors';
 
@@ -8,23 +17,34 @@ import type { GhostEntity } from '../engine/types';
 /**
  * Line-clear preview hint.
  *
- * Renders semi-transparent strips in the *current piece's color* over every
- * row/column that would be cleared if the player committed the ghost
- * placement. Tone follows the penta_block_blast valid-drop convention
- * (~30% alpha, docs/penta-block-blast-reference.md §3.4) but uses the piece
- * color so the player intuits which block is "powering" the clear.
+ * The cleared row/column area is filled with the *current piece's color*,
+ * but instead of a flat tint or a hard outline, the alpha is modulated by
+ * a diagonal `LinearGradient` whose origin slides continuously. With
+ * `mode="repeat"` the gradient tiles across the canvas, so the painted
+ * regions (cleared rows/cols) show a moving wave of brightness — calmer
+ * than a stroke, more attention-grabbing than a static fill.
  *
- * Implementation:
- *   - The path is derived on the UI thread from `ghost.anchor`, `ghost.valid`
- *     and the `boardBits` snapshot. No React re-renders during drag.
- *   - When the ghost is invalid or hidden the path is empty, so nothing draws.
+ * Wave geometry:
+ *   - WAVE_LEN = cellSize × 5 (one band ≈ five tiles wide).
+ *   - The gradient is anchored on a 45° axis so both row strips
+ *     (horizontal) and column strips (vertical) read the same flowing
+ *     motion.
+ *   - WAVE_DUR_MS = 1300 ms per cycle, linear easing — keeps the rhythm
+ *     steady so the eye reads it as continuous water-like flow rather
+ *     than a heartbeat.
  *
- * Z-order: place above settled blocks, below the ghost — the alpha tint then
- * reads on top of the cells that will explode.
+ * Path + wave are both derived on the UI thread (no React re-render
+ * during drag).
+ *
+ * Z-order: above settled blocks, below the ghost.
  */
 
-/** Stripe alpha (matches v1 GameSurface.drawClearHint). */
-const HINT_OPACITY = 0.32;
+const WAVE_DUR_MS = 1300;
+/** Bright band alpha (hex suffix). Kept moderate so the dragged piece on
+ *  top remains the visually dominant element. */
+const WAVE_PEAK = 'A6'; // ≈ 0.65
+/** Dim valley alpha (hex suffix). */
+const WAVE_TROUGH = '2E'; // ≈ 0.18
 
 export function ClearHintNode({
   ghost,
@@ -40,7 +60,25 @@ export function ClearHintNode({
   boardRows: number;
 }) {
   const shape = ghost.shape;
-  const hintColor = colorForPieceId(ghost.pieceId);
+  const fillColor = colorForPieceId(ghost.pieceId);
+  const waveLen = cellSize * 5;
+
+  const wavePos = useSharedValue(0);
+  useEffect(() => {
+    wavePos.value = withRepeat(
+      withTiming(waveLen, { duration: WAVE_DUR_MS, easing: Easing.linear }),
+      -1,
+      false, // hard-snap back to 0 each cycle — invisible because gradient repeats
+    );
+    return () => {
+      cancelAnimation(wavePos);
+    };
+  }, [wavePos, waveLen]);
+
+  const gradStart = useDerivedValue(() => vec(wavePos.value, wavePos.value));
+  const gradEnd = useDerivedValue(() =>
+    vec(wavePos.value + waveLen, wavePos.value + waveLen),
+  );
 
   const path = useDerivedValue(() => {
     const p = Skia.Path.Make();
@@ -51,19 +89,26 @@ export function ClearHintNode({
     const total = boardCols * boardRows;
     if (bits.length !== total) return p;
 
-    // Simulated occupancy: existing cells + ghost shape stamped at anchor.
+    // Two parallel grids:
+    //   occ      — board occupancy after the ghost lands (used to detect
+    //              full rows/cols).
+    //   pieceSet — the cells the dragged piece itself occupies. These are
+    //              skipped when stamping the hint so the wave has cell-shaped
+    //              holes where the piece sits, letting the dragged block
+    //              read clearly on top instead of being camouflaged by a
+    //              same-colored tint underneath.
     const occ = new Array<number>(total);
     for (let i = 0; i < total; i++) occ[i] = bits[i];
+    const pieceSet = new Array<number>(total).fill(0);
     for (let i = 0; i < shape.length; i++) {
       const r = a.row + shape[i][0];
       const c = a.col + shape[i][1];
       if (r >= 0 && r < boardRows && c >= 0 && c < boardCols) {
-        occ[r * boardCols + c] = 1;
+        const idx = r * boardCols + c;
+        occ[idx] = 1;
+        pieceSet[idx] = 1;
       }
     }
-
-    const boardW = boardCols * cellSize;
-    const boardH = boardRows * cellSize;
 
     for (let r = 0; r < boardRows; r++) {
       let full = true;
@@ -73,8 +118,16 @@ export function ClearHintNode({
           break;
         }
       }
-      if (full) {
-        p.addRect({ x: 0, y: r * cellSize, width: boardW, height: cellSize });
+      if (!full) continue;
+      // Stamp this row cell-by-cell, skipping cells the piece will sit in.
+      for (let c = 0; c < boardCols; c++) {
+        if (pieceSet[r * boardCols + c]) continue;
+        p.addRect({
+          x: c * cellSize,
+          y: r * cellSize,
+          width: cellSize,
+          height: cellSize,
+        });
       }
     }
     for (let c = 0; c < boardCols; c++) {
@@ -85,12 +138,33 @@ export function ClearHintNode({
           break;
         }
       }
-      if (full) {
-        p.addRect({ x: c * cellSize, y: 0, width: cellSize, height: boardH });
+      if (!full) continue;
+      for (let r = 0; r < boardRows; r++) {
+        if (pieceSet[r * boardCols + c]) continue;
+        p.addRect({
+          x: c * cellSize,
+          y: r * cellSize,
+          width: cellSize,
+          height: cellSize,
+        });
       }
     }
     return p;
   });
 
-  return <Path path={path} color={hintColor} opacity={HINT_OPACITY} />;
+  return (
+    <Path path={path}>
+      <LinearGradient
+        start={gradStart}
+        end={gradEnd}
+        colors={[
+          `${fillColor}${WAVE_TROUGH}`,
+          `${fillColor}${WAVE_PEAK}`,
+          `${fillColor}${WAVE_TROUGH}`,
+        ]}
+        positions={[0, 0.5, 1]}
+        mode="repeat"
+      />
+    </Path>
+  );
 }
