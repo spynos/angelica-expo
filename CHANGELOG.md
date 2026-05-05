@@ -9,6 +9,17 @@
 
 ### Changed
 
+- 블록매치 **칭찬 팝업(LineClearPopup)** 과 **스테이지 커튼(StageCurtain)**
+  의 색을 카페 브랜드 톤(크림 보드 + 골드 액센트)에 맞춰 정렬했습니다.
+  팝업 GOOD/GREAT/EXCELLENT/AMAZING 4단계 컬러를 네온 옐로/오렌지/레드
+  대신 dusty gold → amber → terracotta → deep rust의 차분한 웜 그라데이션
+  으로 교체하고, 커튼 그라데이션도 chestnut/apricot 네온에서 walnut/caramel
+  로 톤다운, 클리어 텍스트는 브랜드 골드 `#E8B23C`로 통일했습니다. 또한
+  `EXCELLENT!` 같은 긴 텍스트가 보드 좁은 폭에서 줄바꿈되던 문제를 위해
+  팝업 half-width를 88→140px로 확장하고 `numberOfLines={1}` +
+  `allowFontScaling={false}`로 단일 라인 보장. 변경 파일:
+  `src/components/blockmatch/v2/overlays/{LineClearPopup,StageCurtain}.tsx`.
+
 - 블록매치 **라인 클리어 힌트**를 정적 30% 알파 단색 띠에서 **drag piece
   컬러로 흐르는 사선 wave gradient**로 교체했습니다. `LinearGradient`를
   `mode="repeat"`로 타일링하고 시작/끝 vector를 1.3초 주기로 슬라이드시켜

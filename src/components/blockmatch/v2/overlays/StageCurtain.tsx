@@ -12,8 +12,13 @@ import { FontFamily } from '@/constants/theme';
 
 import { DUR_CURTAIN_CLOSE, DUR_CURTAIN_OPEN } from '../engine/constants';
 
-const CURTAIN_DARK = '#7A3C18';  // warm amber chestnut
-const CURTAIN_MID = '#E8A850';   // warm spring apricot-gold
+// Curtain gradient kept in the cafe warm-cream / caramel family so the
+// stage-clear flourish doesn't break the palette set by the cream board
+// (#FAF7F2) and brand gold accent (#E8B23C). Walnut at the panel edges
+// and caramel at the seam — soft theatrical reveal without the original
+// orange chestnut neon.
+const CURTAIN_DARK = '#8A5E2E';  // muted walnut
+const CURTAIN_MID = '#D4A862';   // caramel gold
 
 const EASING = Easing.inOut(Easing.cubic);
 
@@ -157,7 +162,7 @@ const styles = StyleSheet.create({
   clearText: {
     fontFamily: FontFamily.sansBold,
     fontSize: 28,
-    color: '#F9C840',
+    color: '#E8B23C', // brand gold accent (also used by ClearHintNode)
     letterSpacing: 4,
   },
 });

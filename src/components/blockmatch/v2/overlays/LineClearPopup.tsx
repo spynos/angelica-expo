@@ -20,7 +20,10 @@ const TOTAL_MS = IN_POP_MS + IN_SETTLE_MS + HOLD_MS + OUT_MS;
 const FLOAT_PX = 72;
 
 const PRAISE = ['GOOD!', 'GREAT!', 'EXCELLENT!', 'AMAZING!'] as const;
-const COLORS = ['#FFE040', '#FFA030', '#FF5828', '#FF2020'] as const;
+// Warm, muted tier colors aligned with the cafe palette (cream board, gold
+// accents). Progression: dusty gold → amber → terracotta → deep rust —
+// keeps the "ascending heat" reading without the neon arcade feel.
+const COLORS = ['#C9A14A', '#C8853A', '#B85F2E', '#9B4624'] as const;
 
 function tierIndex(lines: number, combo: number): number {
   const v = lines >= 2 ? lines : combo;
@@ -72,12 +75,13 @@ export function LineClearPopup({
     const rawY = (avgRow + 0.5) * cellSize;
     const topY = Math.max(50, Math.min(boardHeight - 110, rawY));
 
-    // X: piece centroid col → pixel, clamped to board
+    // X: piece centroid col → pixel, clamped so the (POPUP_HALF_W) wide
+    // popup never crosses the board edge.
     const rawX =
       placedCentroidCol !== null
         ? (placedCentroidCol + 0.5) * cellSize
         : boardWidth / 2;
-    const centerX = Math.max(80, Math.min(boardWidth - 80, rawX));
+    const centerX = Math.max(POPUP_HALF_W, Math.min(boardWidth - POPUP_HALF_W, rawX));
 
     setDisplay({ praise: PRAISE[tier], color: COLORS[tier], combo, centerX, topY });
 
@@ -128,9 +132,17 @@ export function LineClearPopup({
         }}
       >
         <Animated.View style={animStyle}>
-          <Text style={[styles.praise, { color: display.color }]}>{display.praise}</Text>
+          <Text
+            style={[styles.praise, { color: display.color }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            {display.praise}
+          </Text>
           {display.combo >= 2 && (
-            <Text style={[styles.comboNum, { color: display.color }]}>{display.combo}x</Text>
+            <Text style={[styles.comboNum, { color: display.color }]} numberOfLines={1}>
+              {display.combo}x
+            </Text>
           )}
         </Animated.View>
       </View>
@@ -138,7 +150,10 @@ export function LineClearPopup({
   );
 }
 
-const POPUP_HALF_W = 88;
+// Half-width of the popup container. Must be wide enough that the longest
+// PRAISE token ("EXCELLENT!") at fontSize 38 + letterSpacing 3 fits on a
+// single line. Empirically ~280px total → 140 half-width.
+const POPUP_HALF_W = 140;
 
 const SHADOW = StyleSheet.create({
   text: {
