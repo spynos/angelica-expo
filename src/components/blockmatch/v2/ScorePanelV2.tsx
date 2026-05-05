@@ -51,10 +51,6 @@ export function ScorePanelV2({
 }) {
   const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Colors[scheme];
-  const isDark = scheme === 'dark';
-
-  const chipBg = isDark ? '#2C2925' : '#FFF8EE';
-  const chipBorder = isDark ? '#3D3A34' : '#E8DFCB';
 
   // --- Score bump + delta floater -----------------------------------
   const scoreScale = useSharedValue(1);
@@ -149,12 +145,7 @@ export function ScorePanelV2({
   return (
     <View style={styles.wrap}>
       {/* Stage chip */}
-      <View
-        style={[
-          styles.chip,
-          { backgroundColor: chipBg, borderColor: chipBorder },
-        ]}
-      >
+      <View style={styles.chip}>
         <Text style={[styles.label, { color: palette.icon }]}>스테이지</Text>
         <Animated.Text
           style={[styles.stageValue, { color: palette.text }, stageStyle]}
@@ -164,13 +155,7 @@ export function ScorePanelV2({
       </View>
 
       {/* Score chip */}
-      <View
-        style={[
-          styles.chip,
-          styles.chipCenter,
-          { backgroundColor: chipBg, borderColor: chipBorder },
-        ]}
-      >
+      <View style={[styles.chip, styles.chipCenter]}>
         <Text style={[styles.label, { color: palette.icon }]}>점수</Text>
         <Animated.Text
           style={[styles.scoreValue, { color: palette.text }, scoreStyle]}
@@ -192,12 +177,7 @@ export function ScorePanelV2({
       </View>
 
       {/* Combo chip */}
-      <View
-        style={[
-          styles.chip,
-          { backgroundColor: chipBg, borderColor: chipBorder },
-        ]}
-      >
+      <View style={styles.chip}>
         <Animated.View
           pointerEvents="none"
           style={[
@@ -232,7 +212,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     borderRadius: Radius.lg,
-    borderWidth: 1,
     alignItems: 'center',
   },
   chipCenter: {
