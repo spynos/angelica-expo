@@ -67,6 +67,58 @@
   `gridLine`)으로 잠가두어 다크모드에서도 동일한 웜 라이트 톤이 유지되며,
   빈 셀은 보드보다 살짝 어두운 `emptyTint` 로 칠해 셀 단위 그리드감을 만듭니다.
 
+- 하단 메뉴바를 YouTube 스타일 클래식 bottom nav로 전환했습니다. 좌측부터
+  `포스트 / 퍼즐 / + / 북카페 / 계정` 5개 슬롯이 동일 너비로 자리하고, 56dp
+  높이에 솔리드 배경 + 상단 hairline 보더, 24px 아이콘 + 10pt 라벨로
+  통일했습니다. 가운데 `+` 슬롯은 실제 라우트가 아니라 가상 버튼으로 카페
+  쓰기 모달(`/(tabs)/cafe/write`)을 직접 push합니다. 게임 화면에서는
+  기존처럼 자동으로 숨깁니다 (`src/components/BottomNavBar.tsx`).
+- 북카페(`/(tabs)/bookcafe`) 탭을 신설했습니다. 출판물 단위로 묶은 콘텐츠를
+  제공할 자리이며, 우선 "준비 중" 플레이스홀더만 노출합니다.
+
+### Changed
+
+- 카페 화면의 헤더 제목을 `문학카페` → `포스트`로 변경했습니다 (하단 탭
+  라벨과 일치).
+- 계정 진입 경로를 통일했습니다. 카페·퍼즐 화면 우측 상단의 프로필 아바타
+  버튼(`HeaderAvatarButton`)을 제거하고, 하단 `계정` 탭으로 단일화했습니다.
+  계정 화면도 push 모달이 아닌 일반 탭으로 동작하도록 `Stack.Screen` 헤더와
+  뒤로가기 버튼을 제거했습니다.
+
+### Removed
+
+- 플로팅 Liquid Glass 알약 형태의 `LiquidTabBar`를 제거했습니다. 새 클래식
+  bottom nav로 대체되었으며, `expo-glass-effect` 의존 코드도 함께 정리되어
+  탭바에서는 더 이상 사용되지 않습니다. 헤더 우측 상단 `HeaderAvatarButton`
+  컴포넌트도 함께 삭제했습니다.
+- Expo Go 호환을 위해 추가했던 런타임 분기 코드를 모두 제거했습니다. 앞으로는
+  development build / production build만 지원합니다. 구체적으로:
+  `src/lib/storage.ts`의 `isExpoGo` 감지 로직과 AsyncStorage 백업 어댑터를
+  제거하고 MMKV 단독 사용으로 되돌렸으며, `src/components/LiquidTabBar.tsx`·
+  `src/lib/social-auth.ts`·`app/(auth)/login.tsx`에서 `expo-glass-effect`,
+  `expo-apple-authentication`을 동적 `require`로 감싸던 fallback 분기를
+  제거하고 정적 `import`로 복원했습니다. `package.json`에서도 `start:go`
+  스크립트를 삭제했습니다. AsyncStorage 의존성 자체는 Supabase 세션 저장에
+  계속 쓰이므로 유지합니다. 결정 배경은 `docs/adr/001-drop-expo-go-support.md`
+  참조.
+
+### Fixed
+
+- 문학카페 피드가 dev build cold-start 직후 8초 동안 멈춘 뒤 timeout으로
+  실패하던 문제를 해결했습니다 (Metro reload 한 번이면 회복되던 증상).
+  원인은 두 단계가 겹친 것이었습니다. 첫째, `useAuthBootstrap.init()`과
+  `onAuthStateChange(INITIAL_SESSION)` 콜백이 둘 다 `refreshProfile()`을
+  호출해 cold-start 시 `/rest/v1/users` 쿼리가 중복 발사되었고,
+  supabase-auth-js의 auth lock 위에서 JWT 갱신까지 끼면 lock 점유 시간이
+  8초를 넘겨 뒤따르는 `fetchFeed`가 timeout을 맞았습니다. 둘째,
+  `withTimeout`이 4초에 reject되어도 내부 fetch는 abort되지 않아 좀비
+  요청이 lock을 계속 잡고 있었습니다. 수정으로 (1) `onAuthStateChange`는
+  `SIGNED_IN`·`USER_UPDATED`에서만 `refreshProfile`을 호출해 중복을
+  제거하고, (2) `fetchFeed`에 TimeoutError 한정 1회 retry(300ms 백오프)를
+  추가해 좀비 lock 시나리오에서 자체 회복하도록 했습니다. 진단용
+  `[diag]` 로그는 supabase.ts·auth.ts·poems.ts에 남겨두어 향후 같은
+  증상을 timeline으로 추적할 수 있게 했습니다.
+
 - 블록매치 블록에 사이즈(=셀 갯수)별 톤을 입히는 팔레트를 추가했습니다.
   같은 갯수 블록은 같은 톤 계열(사이즈 1=코랄 피치 / 2=허니 골드 /
   3=프레시 민트 / 4=브라이트 아쿠아 / 5=라이트 라일락)로 묶이고, 같은

@@ -13,7 +13,6 @@ import { useFocusEffect } from 'expo-router';
 
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { HeaderAvatarButton } from '@/src/components/HeaderAvatarButton';
 import { PoemCard } from '@/src/components/PoemCard';
 import { fetchFeed } from '@/src/lib/poems';
 import { useAuthStore } from '@/src/store/auth';
@@ -85,8 +84,7 @@ export default function CafeFeed() {
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[Typography.display, { color: palette.text }]}>문학카페</Text>
-        <HeaderAvatarButton />
+        <Text style={[Typography.display, { color: palette.text }]}>포스트</Text>
       </View>
       {loading && poems.length === 0 ? (
         <View style={styles.center}>
