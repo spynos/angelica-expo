@@ -46,6 +46,15 @@ export default function PuzzleHome() {
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[Typography.display, { color: palette.text }]}>퍼즐</Text>
+        {__DEV__ ? (
+          <Pressable
+            onPress={() => router.push('/blockmatch-lab')}
+            hitSlop={Spacing.sm}
+            style={({ pressed }) => [styles.devLink, pressed && { opacity: 0.5 }]}
+          >
+            <Text style={styles.devLinkLabel}>🧪 LAB</Text>
+          </Pressable>
+        ) : null}
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.greetingBlock}>
@@ -191,6 +200,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
+  },
+  devLink: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#FFF8EE',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5DCC9',
+  },
+  devLinkLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5A554D',
+    letterSpacing: 0.5,
   },
   content: {
     paddingHorizontal: Spacing.xl,
